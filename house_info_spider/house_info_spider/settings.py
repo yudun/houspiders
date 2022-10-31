@@ -19,6 +19,15 @@ NEWSPIDER_MODULE = 'house_info_spider.spiders'
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
 
+# Desired file format
+FEEDS = {
+    'output/house_info.csv': {'format': 'csv', 'overwrite': True}
+}
+
+LOG_FILE = 'log/log.txt'
+LOG_FILE_APPEND = False
+LOG_LEVEL = 'INFO'
+
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 #CONCURRENT_REQUESTS = 32
 

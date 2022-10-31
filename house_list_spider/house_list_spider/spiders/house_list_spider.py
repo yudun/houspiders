@@ -52,6 +52,7 @@ class HouseListSpider(scrapy.Spider):
                 house_id_parse = re.findall(r'/b-\d+/', house_link)
                 if len(house_id_parse) != 1 and len(re.findall(r'\d+', house_id_parse[0])) != 1:
                     logging.error(f'house_id parse failure: {house_link}')
+                    return
                 house_id = int(re.findall(r'\d+', house_id_parse[0])[0])
 
                 yield {'house_id': house_id,

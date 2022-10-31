@@ -24,7 +24,7 @@ FEEDS = {
     'output/house_links.csv': {'format': 'csv', 'overwrite': True}
 }
 
-LOG_FILE = 'log.txt'
+LOG_FILE = 'log/log.txt'
 LOG_FILE_APPEND = False
 LOG_LEVEL = 'INFO'
 

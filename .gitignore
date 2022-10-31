@@ -1,7 +1,7 @@
 .idea
 
-*/output/*.csv
-log.txt
+*/output/*
+*/log/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
