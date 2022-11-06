@@ -9,6 +9,11 @@ class HouseListSpider(scrapy.Spider):
     name = 'house_list'
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/48.0'
 
+    def get_price_from_text(self, price_item):
+        if isinstance(price_item, str):
+            return int(price_item.replace(',', ''))
+        return None
+
     def start_requests(self):
         for url in HOUSE_LIST_START_URL_LIST:
             yield scrapy.Request(url=url, callback=self.fanout_list_page)
@@ -37,17 +42,32 @@ class HouseListSpider(scrapy.Spider):
                 logging.error(f'listing_house_name parse failure: {listing_house_name}')
 
             house_link_list = []
-            # if this house has details list, it contains multiple house_link
-            house_detail_list = house.css('.detail>a')
-            if len(house_detail_list) > 0:
-                for detail in house_detail_list:
-                    house_link_list.append(detail.css('a::attr("href")').get())
-            elif len(house.css('a.detailLink::attr("href")')) > 0:
-                house_link_list.append(house.css('a.detailLink::attr("href")').get())
-            else:
-                logging.error(f'house_link can not be found for {listing_house_name}.')
+            house_listing_price_list = []
 
-            for house_link in house_link_list:
+            house_item_list = house.css('.raSpecRow.checkSelect')
+            # if this house has details list, it contains multiple house_link
+            if len(house_item_list) > 0:
+                for house_item in house_item_list:
+                    house_link_list.append(house_item.css('.detail>a::attr("href")').get())
+                    house_listing_price_list.append(self.get_price_from_text(house_item.css('.priceLabel>span.num::text').get()))
+            # Otherwise it only has one house_link
+            else:
+                if len(house.css('a.detailLink::attr("href")')) > 0:
+                    house_link_list.append(house.css('a.detailLink::attr("href")').get())
+                else:
+                    logging.error(f'house_link can not be found for {listing_house_name}.')
+                    return
+                if len(house.css('.price>span.num::text')) > 0:
+                    house_listing_price_list.append(
+                        self.get_price_from_text(house.css('.price>span.num::text').get()))
+                else:
+                    house_listing_price_list.append(None)
+                    logging.error(f'house_price can not be found for {listing_house_name}.')
+
+            for idx in range(len(house_link_list)):
+                house_link = house_link_list[idx]
+                house_listing_price = house_listing_price_list[idx]
+
                 # Parse house_id from house_link
                 house_id_parse = re.findall(r'/b-\d+/', house_link)
                 if len(house_id_parse) != 1 and len(re.findall(r'\d+', house_id_parse[0])) != 1:
@@ -58,6 +78,7 @@ class HouseListSpider(scrapy.Spider):
                 yield {'house_id': house_id,
                        'is_pr_item': is_pr_item,
                        'listing_house_name': listing_house_name,
+                       'listing_house_price': house_listing_price,
                        'sale_category': sale_category,
                        'city': city}
 
