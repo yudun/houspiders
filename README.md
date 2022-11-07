@@ -11,7 +11,7 @@ The cralwer has folliwing 3 component:
 ### 1. house_list_spider 
 It will crawl the house list every day and dump to folder `output/YYYYMMDD/house_links.csv`
 
-### 2. new_house_list_processor
+### 2. house_list_processor
 It will scan the new house_list info after house_list_spider finished 
 and output a feed to be consumed by house_info_spider:
 
@@ -19,7 +19,7 @@ and output a feed to be consumed by house_info_spider:
 
  1. Add new listed houses to `house_link` table and put them into feed 
  2. For those houses with updated price or was unavailable, 
-    we merge its price to `house_link` table and and put it into feed;
+    we merge its info to `house_link` and `house_price_history` table and put it into feed;
  3. For remaining house, they are existing house w/o updated price, we do nothing 
  4. For those available house not showing up in latest house_list, put them into feed;
 
