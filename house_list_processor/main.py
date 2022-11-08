@@ -2,7 +2,7 @@ import getopt
 import sys
 import pandas as pd
 
-from mysql.util import get_mysql_cnx
+from db.util import get_mysql_cnx
 
 
 def main(house_links_file_path, output_file_path):
