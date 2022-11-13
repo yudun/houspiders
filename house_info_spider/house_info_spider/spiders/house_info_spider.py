@@ -50,8 +50,9 @@ class HouseInfoSpider(scrapy.Spider):
             yield scrapy.Request(url=utils.get_lifull_url_from_house_id(row.house_id), callback=self.parse_house_info, cb_kwargs={'house_id': row.house_id})
 
     def parse_house_info(self, response, house_id):
-        if response.status == 404:
+        if response.status == 404 or response.css('.mod-expiredInformation').get() is not None:
             process_unavailable_house(house_id, self.cnx, self.cur)
+            return
         elif len(response.css('.mod-detailTopSale')) != 1:
             logging.error(f'House is in wrong format: {response.url}')
             return
