@@ -1,6 +1,11 @@
 import scrapy
 import re
 import logging
+import sys
+
+sys.path.append('../')
+
+from utils import utils
 
 HOUSE_LIST_START_URL_LIST = ['https://www.homes.co.jp/mansion/chuko/tokyo/list']
 
@@ -8,11 +13,6 @@ HOUSE_LIST_START_URL_LIST = ['https://www.homes.co.jp/mansion/chuko/tokyo/list']
 class HouseListSpider(scrapy.Spider):
     name = 'house_list'
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/48.0'
-
-    def get_price_from_text(self, price_item):
-        if isinstance(price_item, str):
-            return int(price_item.replace(',', ''))
-        return None
 
     def start_requests(self):
         for url in HOUSE_LIST_START_URL_LIST:
@@ -49,7 +49,7 @@ class HouseListSpider(scrapy.Spider):
             if len(house_item_list) > 0:
                 for house_item in house_item_list:
                     house_link_list.append(house_item.css('.detail>a::attr("href")').get())
-                    house_listing_price_list.append(self.get_price_from_text(house_item.css('.priceLabel>span.num::text').get()))
+                    house_listing_price_list.append(utils.get_int_from_text(house_item.css('.priceLabel>span.num::text').get()))
             # Otherwise it only has one house_link
             else:
                 if len(house.css('a.detailLink::attr("href")')) > 0:
@@ -59,7 +59,7 @@ class HouseListSpider(scrapy.Spider):
                     return
                 if len(house.css('.price>span.num::text')) > 0:
                     house_listing_price_list.append(
-                        self.get_price_from_text(house.css('.price>span.num::text').get()))
+                        utils.get_int_from_text(house.css('.price>span.num::text').get()))
                 else:
                     house_listing_price_list.append(None)
                     logging.error(f'house_price can not be found for {listing_house_name}.')

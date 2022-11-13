@@ -2,6 +2,7 @@ import csv
 import getopt
 import sys
 import pandas as pd
+import logging
 
 sys.path.append('../')
 
@@ -56,7 +57,6 @@ def handle_updated_house_df(df, cnx):
     Update the house in `house_link` table.
     """
     cur = cnx.cursor(buffered=True)
-    date_today_str = utils.get_date_str_today()
     success_updated_rowcount = 0
     for index, row in df.iterrows():
         rowcount = dbutil.update_table(val_map={
@@ -72,7 +72,7 @@ def handle_updated_house_df(df, cnx):
         table_name='lifull_house_link',
         cur=cur)
         success_updated_rowcount += rowcount
-        print(row.listing_house_name, rowcount)
+        logging.debug(f'update_rowcount={rowcount}, {row.listing_house_name}')
 
         # Commit the changes
         cnx.commit()
@@ -138,7 +138,7 @@ def main(house_links_file_path, output_file_path, strategy):
     # Close the database connection
     cnx.close()
 
-    print(success_added_rowcount, success_updated_available_rowcount, success_updated_rowcount)
+    logging.info(f'{success_added_rowcount}, {success_updated_available_rowcount}, {success_updated_rowcount}')
 
     # Write output_house_ids to output_file_path
     with open(output_file_path, 'w+') as f:
@@ -146,7 +146,7 @@ def main(house_links_file_path, output_file_path, strategy):
         write = csv.writer(f)
         write.writerow(['house_id'])
         write.writerows([[x] for x in output_house_ids])
-        print(f'{len(output_house_ids)} houses written to {output_file_path}')
+        logging.info(f'{len(output_house_ids)} houses written to {output_file_path}')
 
 
 if __name__ == "__main__":
@@ -154,7 +154,7 @@ if __name__ == "__main__":
     output_file_path = ''
     strategy = 'update_only'
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hi:o:", ["ifile=", "ofile="])
+        opts, args = getopt.getopt(sys.argv[1:], "hi:o:s:", ["ifile=", "ofile=", "strategy="])
     except getopt.GetoptError:
         print('main.py -i <house_links_file_path> -o <output_file_path>')
         sys.exit(2)
