@@ -1,5 +1,6 @@
 from datetime import date
 import re
+import logging
 
 
 def get_lifull_url_from_house_id(house_id):
@@ -26,3 +27,16 @@ def get_float_from_text(item):
             return 0
         return float(parsed_str)
     return None
+
+
+def get_log_level_from_str(log_level_str):
+    if log_level_str == 'debug':
+        return logging.DEBUG
+    elif log_level_str == 'info':
+        return logging.INFO
+    elif log_level_str == 'error':
+        return logging.ERROR
+    elif log_level_str == 'fatal':
+        return logging.FATAL
+    else:
+        return None

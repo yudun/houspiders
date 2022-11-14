@@ -43,14 +43,11 @@ class HouseInfoSpider(scrapy.Spider):
         self.cnx.close()
 
     def start_requests(self):
-        # df = pd.read_csv(self.house_link_file_path)
-        df = pd.DataFrame({
-            'house_id': [1234],
-        })
-
+        df = pd.read_csv(self.house_link_file_path)
         logging.info(f'Total {len(df)} houses will be scrawled.')
         for index, row in df.iterrows():
-            yield scrapy.Request(url=utils.get_lifull_url_from_house_id(row.house_id), callback=self.parse_house_info, cb_kwargs={'house_id': row.house_id})
+            yield scrapy.Request(url=utils.get_lifull_url_from_house_id(row.house_id), callback=self.parse_house_info,
+                                 cb_kwargs={'house_id': row.house_id})
 
     def parse_house_info(self, response, house_id):
         if response.status == 404 or response.css('.mod-expiredInformation').get() is not None:

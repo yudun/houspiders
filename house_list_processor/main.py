@@ -155,13 +155,14 @@ def main(house_links_file_path, output_file_path, strategy):
 
 
 if __name__ == "__main__":
-    usage = 'main.py -i <parent_dir_path> -o <output_file_path> -s <strategy> --logfile <log_file>'
+    usage = 'main.py -i <parent_dir_path> -o <output_file_path> -s <strategy> --logfile <log_file> --loglevel <loglevel>'
     house_links_file_path = ''
     output_file_path = ''
     strategy = 'update_only'
     log_file = ''
+    loglevel = logging.INFO
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hi:o:s:l:", ["ifile=", "ofile=", "strategy=", "logfile="])
+        opts, args = getopt.getopt(sys.argv[1:], "hi:o:s:l:", ["ifile=", "ofile=", "strategy=", "logfile=", "loglevel="])
     except getopt.GetoptError:
         print(usage)
         sys.exit(2)
@@ -177,6 +178,8 @@ if __name__ == "__main__":
             strategy = arg
         elif opt in ("-l", "--logfile"):
             log_file = arg
+        elif opt in ("--loglevel"):
+            loglevel = utils.get_log_level_from_str(arg)
     assert strategy in ('update_only', 'all')
     if house_links_file_path == '' or output_file_path == '' or log_file == '':
         print(usage)
@@ -187,7 +190,7 @@ if __name__ == "__main__":
     print('Strategy used:', strategy)
     print('Log to file:', log_file)
 
-    logging.basicConfig(level=logging.DEBUG,
+    logging.basicConfig(level=loglevel,
                         filemode='w',
                         filename=log_file)
 

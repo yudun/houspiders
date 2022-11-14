@@ -252,12 +252,13 @@ def process_house_info(house_id, response, cnx, cur):
 
 
 if __name__ == "__main__":
-    usage = 'main.py -i <parent_dir_path> --id <certain_house_id> --logfile <log_file>'
+    usage = 'main.py -i <parent_dir_path> --id <certain_house_id> --logfile <log_file> --loglevel <loglevel>'
     parent_dir_path = ''
     log_file = ''
     certain_house_id = ''
+    loglevel = logging.INFO
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hi:l:", ["dir=", "logfile=", "id="])
+        opts, args = getopt.getopt(sys.argv[1:], "hi:l:", ["dir=", "logfile=", "id=", "loglevel="])
     except getopt.GetoptError:
         print(usage)
         sys.exit(2)
@@ -269,6 +270,8 @@ if __name__ == "__main__":
             parent_dir_path = arg
         elif opt in ("--id"):
             certain_house_id = arg
+        elif opt in ("--loglevel"):
+            loglevel = utils.get_log_level_from_str(arg)
         elif opt in ("-l", "--logfile"):
             log_file = arg
     if parent_dir_path == '' or log_file == '':
@@ -276,7 +279,7 @@ if __name__ == "__main__":
         sys.exit(2)
     print('Input parent dir path is', parent_dir_path)
 
-    logging.basicConfig(level=logging.DEBUG,
+    logging.basicConfig(level=loglevel,
                         filemode='w',
                         filename=log_file)
 
