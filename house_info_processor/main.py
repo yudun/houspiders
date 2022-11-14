@@ -4,6 +4,7 @@ python ./main.py -i /home/ubuntu/houspiders/house_info_spider/output/raw_html --
 from os import listdir
 from os.path import isfile, join, basename
 from datetime import date
+import json
 import getopt
 import logging
 import re
@@ -130,7 +131,7 @@ class HouseInfo:
         self.trade_method = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-taiyou::text').get())
 
     def __str__(self):
-        return self.__dict__
+        return json.dumps(self.__dict__, indent=2)
 
 
 def process_unavailable_house(house_id, cnx, cur):
@@ -172,7 +173,7 @@ def update_house_price_if_changed(house_id, house_price, cnx, cur):
 
 
 def update_house_info_table(house_info, cnx, cur):
-    print(f'{house_info.house_id}: {house_info}')
+    logging.debug(f'{house_info.house_id}: {house_info}')
     pass
 
 
