@@ -131,7 +131,7 @@ class HouseInfo:
         self.trade_method = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-taiyou::text').get())
 
     def __str__(self):
-        return json.dumps(self.__dict__, indent=2)
+        return json.dumps(self.__dict__, indent=2, ensure_ascii=False)
 
 
 def process_unavailable_house(house_id, cnx, cur):
@@ -218,6 +218,7 @@ if __name__ == "__main__":
     print('Input parent dir path is', parent_dir_path)
 
     logging.basicConfig(level=logging.DEBUG,
+                        filemode='w',
                         filename=log_file)
 
     # Connect to the database

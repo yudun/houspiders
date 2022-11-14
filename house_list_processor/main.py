@@ -188,6 +188,7 @@ if __name__ == "__main__":
     print('Log to file:', log_file)
 
     logging.basicConfig(level=logging.DEBUG,
+                        filemode='w',
                         filename=log_file)
 
     main(house_links_file_path, strategy, strategy)
