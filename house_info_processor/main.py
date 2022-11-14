@@ -1,3 +1,6 @@
+"""
+python ./main.py -i /home/ubuntu/houspiders/house_info_spider/output/raw_html --logfile log/log.txt
+"""
 from os import listdir
 from os.path import isfile, join, basename
 from datetime import date
@@ -148,7 +151,7 @@ def update_house_price_if_changed(house_id, house_price, cnx, cur):
 
 
 def update_house_info_table(house_info, cnx, cur):
-    print(house_info)
+    print(f'{house_info.house_id}: {house_info}')
     pass
 
 
@@ -160,26 +163,37 @@ def process_house_info(house_id, response, cnx, cur):
     # Construct the HouseInfo struct
     house_info = HouseInfo(house_id, response)
 
-    update_house_price_if_changed(house_id, house_info.price, cnx, cur)
+    updated_row_count = update_house_price_if_changed(house_id, house_info.price, cnx, cur)
+    if updated_row_count > 0:
+        logging.info(f'Update {updated_row_count} in lifull_house_price_history for {house_id}')
 
     update_house_info_table(house_info, cnx, cur)
 
 
 if __name__ == "__main__":
+    usage = 'main.py -i <parent_dir_path> --logfile <log_file>'
     parent_dir_path = ''
+    log_file = ''
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hi:", ["dir="])
+        opts, args = getopt.getopt(sys.argv[1:], "hi:l:", ["dir=", "logfile="])
     except getopt.GetoptError:
-        print('main.py -i <parent_dir_path>')
+        print(usage)
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('main.py -i <parent_dir_path>')
+            print(usage)
             sys.exit()
         elif opt in ("-i", "--dir"):
             parent_dir_path = arg
+        elif opt in ("-l", "--logfile"):
+            log_file = arg
+    if parent_dir_path == '' or log_file == '':
+        print(usage)
+        sys.exit(2)
     print('Input parent dir path is', parent_dir_path)
 
+    logging.basicConfig(level=logging.DEBUG,
+                        filename=log_file)
     # Connect to the database
     cnx = dbutil.get_mysql_cnx()
     cur = cnx.cursor(buffered=True)
@@ -189,4 +203,5 @@ if __name__ == "__main__":
     for file_path in file_paths[:1]:
         house_id = basename(file_path).replace('.html', '')
         with open(file_path, 'r') as f:
+            logging.debug(f'process_house_info for {file_path}')
             process_house_info(house_id, Selector(text=str(f.read())), cnx, cur)

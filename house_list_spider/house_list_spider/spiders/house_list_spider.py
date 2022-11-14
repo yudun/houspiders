@@ -1,3 +1,6 @@
+"""
+scrapy crawl house_list -o output/house_links.csv --logfile log/log.txt
+"""
 import scrapy
 import re
 import logging

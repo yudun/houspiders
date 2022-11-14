@@ -1,3 +1,6 @@
+"""
+scrapy crawl house_info -a i=/home/ubuntu/houspiders/house_list_processor/output/house_id_to_crawl.csv --logfile log/log.txt
+"""
 import scrapy
 from scrapy import signals
 import pandas as pd

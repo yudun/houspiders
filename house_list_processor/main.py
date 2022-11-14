@@ -1,3 +1,6 @@
+"""
+python ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/house_links.csv -o output/house_id_to_crawl.csv --logfile log/log.txt
+"""
 import csv
 import getopt
 import sys
@@ -138,7 +141,9 @@ def main(house_links_file_path, output_file_path, strategy):
     # Close the database connection
     cnx.close()
 
-    logging.info(f'{success_added_rowcount}, {success_updated_available_rowcount}, {success_updated_rowcount}')
+    logging.info(f'success_added_rowcount:{success_added_rowcount}, '
+                 f'success_updated_available_rowcount: {success_updated_available_rowcount}, '
+                 f'success_updated_rowcount: {success_updated_rowcount}')
 
     # Write output_house_ids to output_file_path
     with open(output_file_path, 'w+') as f:
@@ -150,17 +155,19 @@ def main(house_links_file_path, output_file_path, strategy):
 
 
 if __name__ == "__main__":
+    usage = 'main.py -i <parent_dir_path> -o <output_file_path> -s <strategy> --logfile <log_file>'
     house_links_file_path = ''
     output_file_path = ''
     strategy = 'update_only'
+    log_file = ''
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hi:o:s:", ["ifile=", "ofile=", "strategy="])
+        opts, args = getopt.getopt(sys.argv[1:], "hi:o:s:l:", ["ifile=", "ofile=", "strategy=", "logfile="])
     except getopt.GetoptError:
-        print('main.py -i <house_links_file_path> -o <output_file_path>')
+        print(usage)
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('main.py -i <house_links_file_path> -o <output_file_path>')
+            print(usage)
             sys.exit()
         elif opt in ("-i", "--ifile"):
             house_links_file_path = arg
@@ -168,8 +175,19 @@ if __name__ == "__main__":
             output_file_path = arg
         elif opt in ("-s", "--strategy"):
             strategy = arg
+        elif opt in ("-l", "--logfile"):
+            log_file = arg
     assert strategy in ('update_only', 'all')
+    if house_links_file_path == '' or output_file_path == '' or log_file == '':
+        print(usage)
+        sys.exit(2)
+
     print('Input file is', house_links_file_path)
     print('Output file is', output_file_path)
     print('Strategy used:', strategy)
+    print('Log to file:', log_file)
+
+    logging.basicConfig(level=logging.DEBUG,
+                        filename=log_file)
+
     main(house_links_file_path, strategy, strategy)
