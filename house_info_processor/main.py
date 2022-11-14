@@ -38,22 +38,22 @@ class HouseInfo:
 
         self.house_id = house_id
         self.name = response.css('.mod-buildingName').css('.bukkenName::text').get()
-
-        valid_district = get_district_from_name(self.name)
-        if len(valid_district) == 0:
-            logging.error(f'{house_id}: error parse district {self.name})')
-            self.district = ''
-        elif len(valid_district) > 1:
-            logging.error(f'{house_id}: error parse district {self.name})')
-            self.district = valid_district[0]
-        else:
-            self.district = valid_district[0]
-
         self.room = response.css('.mod-buildingName').css('.bukkenRoom::text').get()
 
         detailTopSale = response.css('.mod-detailTopSale')
         self.price = utils.get_int_from_text(detailTopSale.css('#chk-bkc-moneyroom::text').get())
         self.address = self.safe_strip(detailTopSale.css('#chk-bkc-fulladdress::text').get())
+
+        valid_district = get_district_from_name(self.address)
+        if len(valid_district) == 0:
+            logging.error(f'{house_id}: error parse district {self.address})')
+            self.district = ''
+        elif len(valid_district) > 1:
+            logging.error(f'{house_id}: error parse district {self.address})')
+            self.district = valid_district[0]
+        else:
+            self.district = valid_district[0]
+
         self.moneykyoueki = utils.get_int_from_text(
             self.safe_strip(detailTopSale.css('#chk-bkc-moneykyoueki::text').get()))
         self.moneyshuuzen = utils.get_int_from_text(
