@@ -26,7 +26,16 @@ def get_district_from_name(name):
 
 
 class HouseInfo:
+    def safe_strip(self, item, default=None):
+        if isinstance(item, str):
+            return item.strip()
+
+        self.num_null_fields += 1
+        return default
+
     def __init__(self, house_id, response):
+        self.num_null_fields = 0
+
         self.house_id = house_id
         self.name = response.css('.mod-buildingName').css('.bukkenName::text').get()
 
@@ -44,11 +53,11 @@ class HouseInfo:
 
         detailTopSale = response.css('.mod-detailTopSale')
         self.price = utils.get_int_from_text(detailTopSale.css('#chk-bkc-moneyroom::text').get())
-        self.address = detailTopSale.css('#chk-bkc-fulladdress::text').get().strip()
+        self.address = self.safe_strip(detailTopSale.css('#chk-bkc-fulladdress::text').get())
         self.moneykyoueki = utils.get_int_from_text(
-            detailTopSale.css('#chk-bkc-moneykyoueki::text').get().strip())
+            self.safe_strip(detailTopSale.css('#chk-bkc-moneykyoueki::text').get()))
         self.moneyshuuzen = utils.get_int_from_text(
-            detailTopSale.css('#chk-bkc-moneyshuuzen::text').get().strip())
+            self.safe_strip(detailTopSale.css('#chk-bkc-moneyshuuzen::text').get()))
 
         self.stations = []
         for traffic in detailTopSale.css('#chk-bkc-fulltraffic').css('.traffic::text').getall():
@@ -59,22 +68,27 @@ class HouseInfo:
                 continue
             self.stations.append((traffic[0], traffic[1], utils.get_int_from_text(traffic[2])))
 
-        build_date_str = detailTopSale.css('#chk-bkc-kenchikudate::text').get().strip()
-        l = re.findall(r'\d+', ''.join(re.findall(r'\d+年\d+月', build_date_str)))
-        if len(l) != 2:
+        build_date_str = self.safe_strip(detailTopSale.css('#chk-bkc-kenchikudate::text').get(), default='')
+        tmp_l = re.findall(r'\d+', ''.join(re.findall(r'\d+年\d+月', build_date_str)))
+        if len(tmp_l) != 2:
             logging.error(f'{house_id}: error parse build_date {build_date_str})')
-            self.build_date = 'null'
+            self.build_date = None
         else:
-            self.build_date = date(int(l[0]), int(l[1]), 1).strftime("%Y-%m-%d")
-        self.age = utils.get_int_from_text(''.join(re.findall(r'築\d+年', build_date_str)))
+            self.build_date = date(int(tmp_l[0]), int(tmp_l[1]), 1).strftime("%Y-%m-%d")
+        tmp_l = re.findall(r'築\d+年', build_date_str)
+        if len(tmp_l) != 1:
+            logging.error(f'{house_id}: error parse build_age {build_date_str})')
+            self.age = None
+        else:
+            self.age = utils.get_int_from_text(tmp_l[0])
 
-        self.window_angle = detailTopSale.css('#chk-bkc-windowangle::text').get().strip()
-        self.house_area = utils.get_float_from_text(detailTopSale.css('#chk-bkc-housearea::text').get().strip())
-        self.balcony_area = utils.get_float_from_text(detailTopSale.css('#chk-bkc-balconyarea::text').get().strip())
-        self.floor_plan = utils.get_float_from_text(detailTopSale.css('#chk-bkc-marodi::text').get().strip())
-        self.feature_comment = utils.get_float_from_text(
-            detailTopSale.css('#chk-bkp-featurecomment::text').get().strip())
-        self.register_date = detailTopSale.css('#chk-bkh-newdate::text').get().strip().replace('/', '-')
+        self.window_angle = self.safe_strip(detailTopSale.css('#chk-bkc-windowangle::text').get())
+        self.house_area = utils.get_float_from_text(self.safe_strip(detailTopSale.css('#chk-bkc-housearea::text').get()))
+        self.balcony_area = utils.get_float_from_text(self.safe_strip(detailTopSale.css('#chk-bkc-balconyarea::text').get()))
+        self.floor_plan = self.safe_strip(detailTopSale.css('#chk-bkc-marodi::text').get())
+        self.feature_comment = self.safe_strip(detailTopSale.css('#chk-bkp-featurecomment::text').get())
+        register_date = detailTopSale.css('#chk-bkh-newdate::text').get()
+        self.register_date = None if register_date is None else register_date.replace('/', '-')
 
         bukkenNotes = response.css('.mod-bukkenNotes')
         equipments = bukkenNotes.css('#chk-bkf-setsubi3>ul.normalEquipment').css('li::text').getall()
@@ -86,27 +100,34 @@ class HouseInfo:
 
         bukkenSpecDetail = response.css('.mod-bukkenSpecDetail')
         self.unit_num = utils.get_int_from_text(bukkenSpecDetail.css('#chk-bkd-allunit::text').get())
-        num_floor_infos = bukkenSpecDetail.css('#chk-bkd-housekai::text').get().split('/')
-        self.floor_num = utils.get_int_from_text(num_floor_infos[0])
-        self.num_total_floor = utils.get_int_from_text(num_floor_infos[1])
-        self.structure = bukkenSpecDetail.css('#chk-bkd-housekouzou::text').get().strip()
-        self.land_usage = bukkenSpecDetail.css('#chk-bkd-landyouto::text').get().strip()
-        self.land_position = bukkenSpecDetail.css('#chk-bkd-landchisei::text').get().strip()
-        self.land_right = bukkenSpecDetail.css('#chk-bkd-landright::text').get().strip()
-        land_moneyshakuchi = bukkenSpecDetail.css('#chk-bkd-moneyshakuchi::text').get()
-        self.land_moneyshakuchi = 'null' if land_moneyshakuchi is None else utils.get_int_from_text(
-            land_moneyshakuchi.strip())
-        land_term = bukkenSpecDetail.css('#id="chk-bkd-conterm"::text').get()
-        self.land_term = 'null' if land_term is None else land_term.strip()
-        self.land_landkokudoho = bukkenSpecDetail.css('#chk-bkd-landkokudoho::text').get().strip()
 
-        self.other_fee_details = bukkenSpecDetail.css('#chk-bkd-moneyother::text').get().strip()
+        num_floor_infos = bukkenSpecDetail.css('#chk-bkd-housekai::text').get()
+        if num_floor_infos is None:
+            self.floor_num = None
+            self.num_total_floor = None
+        else:
+            num_floor_infos = num_floor_infos.split('/')
+            self.floor_num = utils.get_int_from_text(num_floor_infos[0])
+            self.num_total_floor = utils.get_int_from_text(num_floor_infos[1])
+
+        self.structure = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-housekouzou::text').get())
+        self.land_usage = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landyouto::text').get())
+        self.land_position = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landchisei::text').get())
+        self.land_right = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landright::text').get())
+        land_moneyshakuchi = bukkenSpecDetail.css('#chk-bkd-moneyshakuchi::text').get()
+        self.land_moneyshakuchi = None if land_moneyshakuchi is None else utils.get_int_from_text(
+            land_moneyshakuchi.strip())
+        land_term = bukkenSpecDetail.css('#chk-bkd-conterm::text').get()
+        self.land_term = None if land_term is None else land_term.strip()
+        self.land_landkokudoho = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landkokudoho::text').get())
+
+        self.other_fee_details = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-moneyother::text').get(), default='')
         other_fees = self.other_fee_details.split('円')
         self.total_other_fee = sum(utils.get_int_from_text(x) for x in other_fees)
 
-        self.manage_details = bukkenSpecDetail.css('#chk-bkd-management::text').get().strip()
-        self.latest_rent_status = bukkenSpecDetail.css('#chk-bkd-genkyo').css('.genkyoText::text').get().strip()
-        self.trade_method = bukkenSpecDetail.css('#chk-bkd-taiyou::text').get().strip()
+        self.manage_details = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-management::text').get())
+        self.latest_rent_status = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-genkyo').css('.genkyoText::text').get())
+        self.trade_method = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-taiyou::text').get())
 
     def __str__(self):
         return self.__dict__
@@ -171,11 +192,12 @@ def process_house_info(house_id, response, cnx, cur):
 
 
 if __name__ == "__main__":
-    usage = 'main.py -i <parent_dir_path> --logfile <log_file>'
+    usage = 'main.py -i <parent_dir_path> --id <certain_house_id> --logfile <log_file>'
     parent_dir_path = ''
     log_file = ''
+    certain_house_id = ''
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hi:l:", ["dir=", "logfile="])
+        opts, args = getopt.getopt(sys.argv[1:], "hi:l:", ["dir=", "logfile=", "id="])
     except getopt.GetoptError:
         print(usage)
         sys.exit(2)
@@ -185,6 +207,8 @@ if __name__ == "__main__":
             sys.exit()
         elif opt in ("-i", "--dir"):
             parent_dir_path = arg
+        elif opt in ("--id"):
+            certain_house_id = arg
         elif opt in ("-l", "--logfile"):
             log_file = arg
     if parent_dir_path == '' or log_file == '':
@@ -194,9 +218,18 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG,
                         filename=log_file)
+
     # Connect to the database
     cnx = dbutil.get_mysql_cnx()
     cur = cnx.cursor(buffered=True)
+
+    # If we only want to check a certain_house_id
+    if certain_house_id != '':
+        file_path = join(parent_dir_path, f'{certain_house_id}.html')
+        with open(file_path, 'r') as f:
+            logging.debug(f'process_house_info for {file_path}')
+            process_house_info(int(certain_house_id), Selector(text=str(f.read())), cnx, cur)
+        sys.exit()
 
     file_paths = [join(parent_dir_path, f) for f in listdir(parent_dir_path)
                   if isfile(join(parent_dir_path, f)) and f.endswith('.html')]
