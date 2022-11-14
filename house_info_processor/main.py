@@ -27,14 +27,17 @@ def get_district_from_name(name):
 
 
 class HouseInfo:
-    def safe_strip(self, item, default=None):
+    def safe_strip(self, item, default=None, do_not_count_null=False):
         if isinstance(item, str):
             return item.strip()
 
-        self.num_null_fields += 1
+        if not do_not_count_null:
+            self.num_null_fields += 1
+
         return default
 
     def __init__(self, house_id, response):
+        # Stats check how many fields are set as null unexpectedly.
         self.num_null_fields = 0
 
         self.house_id = house_id
@@ -72,12 +75,14 @@ class HouseInfo:
         build_date_str = self.safe_strip(detailTopSale.css('#chk-bkc-kenchikudate::text').get(), default='')
         tmp_l = re.findall(r'\d+', ''.join(re.findall(r'\d+年\d+月', build_date_str)))
         if len(tmp_l) != 2:
+            self.num_null_fields += 1
             logging.error(f'{house_id}: error parse build_date {build_date_str})')
             self.build_date = None
         else:
             self.build_date = date(int(tmp_l[0]), int(tmp_l[1]), 1).strftime("%Y-%m-%d")
         tmp_l = re.findall(r'築\d+年', build_date_str)
         if len(tmp_l) != 1:
+            self.num_null_fields += 1
             logging.error(f'{house_id}: error parse build_age {build_date_str})')
             self.age = None
         else:
@@ -86,30 +91,43 @@ class HouseInfo:
         self.window_angle = self.safe_strip(detailTopSale.css('#chk-bkc-windowangle::text').get())
         self.house_area = utils.get_float_from_text(self.safe_strip(detailTopSale.css('#chk-bkc-housearea::text').get()))
         self.balcony_area = utils.get_float_from_text(self.safe_strip(detailTopSale.css('#chk-bkc-balconyarea::text').get()))
+        self.has_balcony = self.balcony_area > 0
         self.floor_plan = self.safe_strip(detailTopSale.css('#chk-bkc-marodi::text').get())
-        self.feature_comment = self.safe_strip(detailTopSale.css('#chk-bkp-featurecomment::text').get())
+        self.feature_comment = self.safe_strip(detailTopSale.css('#chk-bkp-featurecomment::text').get(), do_not_count_null=True)
         register_date = detailTopSale.css('#chk-bkh-newdate::text').get()
         self.register_date = None if register_date is None else register_date.replace('/', '-')
 
         bukkenNotes = response.css('.mod-bukkenNotes')
-        equipments = bukkenNotes.css('#chk-bkf-setsubi3>ul.normalEquipment').css('li::text').getall()
-        equipments = [re.sub('\n.*', '', x.strip()) for x in equipments]
-        self.has_elevator = 'エレベーター' in equipments
-        self.has_balcony = self.balcony_area > 0
-        self.note = ''.join(bukkenNotes.css('#chk-bkf-biko::text').getall()).strip()
-        self.has_special_note = '告知事項' in self.note
+        self.has_elevator = False
+        self.note = None
+        self.has_special_note = False
+        for tr in bukkenNotes.css('tr'):
+            if tr.css('th::text').get() == '設備・サービス':
+                equipments = tr.css('ul.normalEquipment').css('li::text').getall()
+                equipments = [re.sub('\n.*', '', x.strip()) for x in equipments]
+                self.has_elevator = 'エレベーター' in equipments
+            elif tr.css('th::text').get() == '備考':
+                self.note = ''.join(tr.css('td#chk-bkf-biko::text').getall()).strip()
+                self.has_special_note = '告知事項' in self.note
 
         bukkenSpecDetail = response.css('.mod-bukkenSpecDetail')
         self.unit_num = utils.get_int_from_text(bukkenSpecDetail.css('#chk-bkd-allunit::text').get())
 
         num_floor_infos = bukkenSpecDetail.css('#chk-bkd-housekai::text').get()
         if num_floor_infos is None:
+            self.num_null_fields += 2
             self.floor_num = None
             self.num_total_floor = None
         else:
-            num_floor_infos = num_floor_infos.split('/')
-            self.floor_num = utils.get_int_from_text(num_floor_infos[0])
-            self.num_total_floor = utils.get_int_from_text(num_floor_infos[1])
+            tmp_l = re.findall(r'\d+階 / \d+階建', num_floor_infos)
+            if len(tmp_l) != 1:
+                self.num_null_fields += 2
+                self.floor_num = None
+                self.num_total_floor = None
+            else:
+                num_floor_infos = num_floor_infos.split('/')
+                self.floor_num = utils.get_int_from_text(num_floor_infos[0])
+                self.num_total_floor = utils.get_int_from_text(num_floor_infos[1])
 
         self.structure = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-housekouzou::text').get())
         self.land_usage = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landyouto::text').get())
@@ -122,8 +140,8 @@ class HouseInfo:
         self.land_term = None if land_term is None else land_term.strip()
         self.land_landkokudoho = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landkokudoho::text').get())
 
-        self.other_fee_details = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-moneyother::text').get(), default='')
-        other_fees = self.other_fee_details.split('円')
+        self.other_fee_details = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-moneyother::text').get(), do_not_count_null=True)
+        other_fees = [] if self.other_fee_details is None else self.other_fee_details.split('円')
         self.total_other_fee = sum(utils.get_int_from_text(x) for x in other_fees)
 
         self.manage_details = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-management::text').get())
@@ -173,8 +191,32 @@ def update_house_price_if_changed(house_id, house_price, cnx, cur):
 
 
 def update_house_info_table(house_info, cnx, cur):
-    logging.debug(f'Full infor for house_id {house_info.house_id}: {house_info}')
-    pass
+    # logging.debug(f'Full info for house_id {house_info.house_id}: {house_info}')
+    insert_data = house_info.__dict__.copy()
+    # We don't need this field in the table.
+    del insert_data['num_null_fields']
+
+    for k in insert_data:
+        # Replace None as 'null' before insert into house_info table
+        if insert_data[k] is None:
+            insert_data[k] = 'null'
+        elif isinstance(insert_data[k], bool):
+            insert_data[k] = 1 if insert_data[k] else 0
+        elif isinstance(insert_data[k], str):
+            insert_data[k] = insert_data[k].replace("'", "\\\'")
+            insert_data[k] = f"'{insert_data[k]}'"
+    logging.debug(f'Full info for house_id {house_info.house_id}: {json.dumps(insert_data, indent=2, ensure_ascii=False)}')
+    l = [x for x in insert_data.keys()]
+    logging.debug(f'{l}')
+    # row_count = dbutil.insert_table(
+    #     val_map=insert_data,
+    #     table_name='',
+    #     cur=cur,
+    #     on_duplicate_update_val_map=insert_data
+    # )
+    # cnx.commit()
+
+    # return row_count
 
 
 def process_house_info(house_id, response, cnx, cur):
