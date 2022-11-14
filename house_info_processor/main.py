@@ -154,7 +154,7 @@ class HouseInfo:
         self.trade_method = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-taiyou::text').get())
 
     def __str__(self):
-        return json.dumps(self.__dict__, indent=2, ensure_ascii=False)
+        return json.dumps(self.__dict__, indent=2, ensure_ascii=False, cls=utils.NpEncoder)
 
 
 def process_unavailable_house(house_id, cnx, cur):
