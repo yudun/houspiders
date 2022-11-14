@@ -26,12 +26,13 @@ def update_table(val_map, where_clause, table_name, cur):
 def insert_table(val_map, table_name, cur, on_duplicate_update_val_map=None):
     column_list = list(val_map.keys())
     value_list = [str(val_map[x]) for x in column_list]
-    on_duplicate_update_clause = ','.join([f'{k}={val_map[k]}' for k in on_duplicate_update_val_map])
+
     query = f"""
         INSERT INTO {table_name} ({','.join(column_list)})
         VALUES ({','.join(value_list)})
         """
     if on_duplicate_update_val_map is not None:
+        on_duplicate_update_clause = ','.join([f'{k}={val_map[k]}' for k in on_duplicate_update_val_map])
         query += f"""
         ON DUPLICATE KEY UPDATE
            {on_duplicate_update_clause}
