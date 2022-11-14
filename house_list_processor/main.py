@@ -130,6 +130,8 @@ def main(house_links_file_path, output_file_path, strategy):
     else:
         newly_unavailable_house_df = None
         possible_new_house_df = new_house_link_df
+        possible_new_house_df['is_pr_item_new'] = possible_new_house_df['is_pr_item']
+        possible_new_house_df['listing_house_price_new'] = possible_new_house_df['listing_house_price']
         updated_house_df = None
 
     # 1. Handle newly_unavailable_house_df: simply put them into feed;
