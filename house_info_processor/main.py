@@ -191,10 +191,13 @@ def update_house_price_if_changed(house_id, house_price, cnx, cur):
 
 
 def update_house_info_table(house_info, cnx, cur):
-    # logging.debug(f'Full info for house_id {house_info.house_id}: {house_info}')
+    logging.debug(f'Full info for house_id {house_info.house_id}: {house_info}')
     insert_data = house_info.__dict__.copy()
     # We don't need this field in the table.
     del insert_data['num_null_fields']
+    # We will store stations in another table.
+    stations = insert_data['stations']
+    del insert_data['stations']
 
     for k in insert_data:
         # Replace None as 'null' before insert into house_info table
@@ -205,18 +208,32 @@ def update_house_info_table(house_info, cnx, cur):
         elif isinstance(insert_data[k], str):
             insert_data[k] = insert_data[k].replace("'", "\\\'")
             insert_data[k] = f"'{insert_data[k]}'"
-    logging.debug(f'Full info for house_id {house_info.house_id}: {json.dumps(insert_data, indent=2, ensure_ascii=False)}')
-    l = [x for x in insert_data.keys()]
-    logging.debug(f'{l}')
-    # row_count = dbutil.insert_table(
-    #     val_map=insert_data,
-    #     table_name='',
-    #     cur=cur,
-    #     on_duplicate_update_val_map=insert_data
-    # )
-    # cnx.commit()
 
-    # return row_count
+    row_count = dbutil.insert_table(
+        val_map=insert_data,
+        table_name='',
+        cur=cur,
+        on_duplicate_update_val_map=insert_data
+    )
+    cnx.commit()
+    if row_count < 0:
+        logging.error(f'House Info for house_id {house_info.house_id} is not inserted.')
+
+    # Update stations info in lifull_stations_near_house table.
+    for line, station, walk_min in stations:
+        row_count = dbutil.insert_table(
+            val_map={
+                'house_id': house_info.house_id,
+                'line_name': f"'{line}'",
+                'station_name': f"'{station}'",
+                'walk_distance_in_minute': walk_min
+            },
+            table_name='lifull_stations_near_house',
+            cur=cur
+        )
+        cnx.commit()
+        if row_count < 0:
+            logging.error(f'Station Info for house_id {house_info.house_id} is not inserted: {line}, {station}, {walk_min}')
 
 
 def process_house_info(house_id, response, cnx, cur):
