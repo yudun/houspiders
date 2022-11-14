@@ -211,7 +211,7 @@ def update_house_info_table(house_info, cnx, cur):
 
     row_count = dbutil.insert_table(
         val_map=insert_data,
-        table_name='',
+        table_name='lifull_house_info',
         cur=cur,
         on_duplicate_update_val_map=insert_data
     )
