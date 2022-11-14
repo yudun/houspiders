@@ -1,5 +1,5 @@
 """
-python ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/house_links.csv -o output/house_id_to_crawl.csv --logfile log/log.txt
+python ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_links.csv -o output/house_id_to_crawl.csv --logfile log/log.txt
 """
 import csv
 import getopt
@@ -95,6 +95,9 @@ def main(house_links_file_path, output_file_path, strategy):
     :param output_file_path: A csv file path to be consumed by downstream house_info_spider
     """
     output_house_ids = []
+    success_added_rowcount = 0
+    success_updated_available_rowcount = 0
+    success_updated_rowcount = 0
 
     # Read and drop duplicated house_id
     new_house_link_df = pd.read_csv(house_links_file_path)
@@ -112,28 +115,36 @@ def main(house_links_file_path, output_file_path, strategy):
     # Read in existing available house
     available_house_df = pd.read_sql(
         'SELECT house_id, is_pr_item, listing_house_price FROM lifull_house_link WHERE is_available', cnx)
-    available_house_df['house_id'] = available_house_df['house_id'].astype(int)
-    available_house_df['is_pr_item'] = available_house_df['is_pr_item'].astype(bool)
+    if len(available_house_df) > 0:
+        available_house_df['house_id'] = available_house_df['house_id'].astype(int)
+        available_house_df['is_pr_item'] = available_house_df['is_pr_item'].astype(bool)
 
-    # Get 3 different groups of houses: new, removed, updated.
-    merged_df = new_house_link_df.merge(available_house_df, how='outer', on=['house_id'])
+        # Get 3 different groups of houses: new, removed, updated.
+        merged_df = new_house_link_df.merge(available_house_df, how='outer', on=['house_id'])
 
-    newly_unavailable_house_df = merged_df[merged_df['is_pr_item_new'].isnull()]
-    possible_new_house_df = merged_df[merged_df['is_pr_item_old'].isnull()]
-    updated_house_df = merged_df.dropna()
-    updated_house_df = updated_house_df[(updated_house_df['is_pr_item_new'] != updated_house_df['is_pr_item_old']) | (
-            updated_house_df['listing_house_price_new'] != updated_house_df['listing_house_price_old'])]
+        newly_unavailable_house_df = merged_df[merged_df['is_pr_item_new'].isnull()]
+        possible_new_house_df = merged_df[merged_df['is_pr_item_old'].isnull()]
+        updated_house_df = merged_df.dropna()
+        updated_house_df = updated_house_df[(updated_house_df['is_pr_item_new'] != updated_house_df['is_pr_item_old']) | (
+                updated_house_df['listing_house_price_new'] != updated_house_df['listing_house_price_old'])]
+    else:
+        newly_unavailable_house_df = None
+        possible_new_house_df = new_house_link_df
+        updated_house_df = None
 
     # 1. Handle newly_unavailable_house_df: simply put them into feed;
-    output_house_ids += list(newly_unavailable_house_df['house_id'])
+    if newly_unavailable_house_df is not None:
+        output_house_ids += list(newly_unavailable_house_df['house_id'])
 
     # 2. Handle possible_new_house_df
-    success_added_rowcount, success_updated_available_rowcount = handle_possible_new_house_df(possible_new_house_df, cnx)
-    output_house_ids += list(possible_new_house_df['house_id'])
+    if possible_new_house_df is not None:
+        success_added_rowcount, success_updated_available_rowcount = handle_possible_new_house_df(possible_new_house_df, cnx)
+        output_house_ids += list(possible_new_house_df['house_id'])
 
     # 2. Handle updated_house_df
-    success_updated_rowcount = handle_updated_house_df(updated_house_df, cnx)
-    output_house_ids += list(updated_house_df['house_id'])
+    if updated_house_df is not None:
+        success_updated_rowcount = handle_updated_house_df(updated_house_df, cnx)
+        output_house_ids += list(updated_house_df['house_id'])
 
     if strategy == 'all':
         output_house_ids = list(new_house_link_df['house_id'])
