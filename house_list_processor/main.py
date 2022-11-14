@@ -1,5 +1,5 @@
 """
-python ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_links.csv -o output/house_id_to_crawl.csv --logfile log/log.txt
+python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_links.csv -o output/house_id_to_crawl.csv --logfile log/log.txt
 """
 import csv
 import getopt

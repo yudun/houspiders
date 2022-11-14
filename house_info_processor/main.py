@@ -1,5 +1,5 @@
 """
-python ./main.py -i /home/ubuntu/houspiders/house_info_spider/output/raw_html --logfile log/log.txt
+python3 ./main.py -i /home/ubuntu/houspiders/house_info_spider/output/raw_html --logfile log/log.txt
 """
 from os import listdir
 from os.path import isfile, join, basename
@@ -89,11 +89,14 @@ class HouseInfo:
             self.age = utils.get_int_from_text(tmp_l[0])
 
         self.window_angle = self.safe_strip(detailTopSale.css('#chk-bkc-windowangle::text').get())
-        self.house_area = utils.get_float_from_text(self.safe_strip(detailTopSale.css('#chk-bkc-housearea::text').get()))
-        self.balcony_area = utils.get_float_from_text(self.safe_strip(detailTopSale.css('#chk-bkc-balconyarea::text').get()))
+        self.house_area = utils.get_float_from_text(
+            self.safe_strip(detailTopSale.css('#chk-bkc-housearea::text').get()))
+        self.balcony_area = utils.get_float_from_text(
+            self.safe_strip(detailTopSale.css('#chk-bkc-balconyarea::text').get()))
         self.has_balcony = self.balcony_area > 0
         self.floor_plan = self.safe_strip(detailTopSale.css('#chk-bkc-marodi::text').get())
-        self.feature_comment = self.safe_strip(detailTopSale.css('#chk-bkp-featurecomment::text').get(), do_not_count_null=True)
+        self.feature_comment = self.safe_strip(detailTopSale.css('#chk-bkp-featurecomment::text').get(),
+                                               do_not_count_null=True)
         register_date = detailTopSale.css('#chk-bkh-newdate::text').get()
         self.register_date = None if register_date is None else register_date.replace('/', '-')
 
@@ -140,12 +143,14 @@ class HouseInfo:
         self.land_term = None if land_term is None else land_term.strip()
         self.land_landkokudoho = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landkokudoho::text').get())
 
-        self.other_fee_details = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-moneyother::text').get(), do_not_count_null=True)
+        self.other_fee_details = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-moneyother::text').get(),
+                                                 do_not_count_null=True)
         other_fees = [] if self.other_fee_details is None else self.other_fee_details.split('円')
         self.total_other_fee = sum(utils.get_int_from_text(x) for x in other_fees)
 
         self.manage_details = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-management::text').get())
-        self.latest_rent_status = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-genkyo').css('.genkyoText::text').get())
+        self.latest_rent_status = self.safe_strip(
+            bukkenSpecDetail.css('#chk-bkd-genkyo').css('.genkyoText::text').get())
         self.trade_method = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-taiyou::text').get())
 
     def __str__(self):
@@ -178,13 +183,15 @@ def update_house_price_if_changed(house_id, house_price, cnx, cur):
     rowcount = 0
     # If current price is different from latest or no record.
     if len(all_rows) == 0 or all_rows[-1][0] != house_price:
-        rowcount = dbutil.insert_table(val_map={
+        insert_data = {
             'house_id': house_id,
             'price': house_price,
             'price_date': f"'{utils.get_date_str_today()}'"
-        },
-            table_name='lifull_house_price_history',
-            cur=cur)
+        }
+        rowcount = dbutil.insert_table(val_map=insert_data,
+                                       table_name='lifull_house_price_history',
+                                       cur=cur,
+                                       on_duplicate_update_val_map=insert_data)
         # Commit the changes
         cnx.commit()
     return rowcount
@@ -216,24 +223,29 @@ def update_house_info_table(house_info, cnx, cur):
         on_duplicate_update_val_map=insert_data
     )
     cnx.commit()
-    if row_count < 0:
+    if row_count <= 0:
         logging.error(f'House Info for house_id {house_info.house_id} is not inserted.')
+    else:
+        logging.info(f'House Info for house_id {house_info.house_id} is inserted.')
 
     # Update stations info in lifull_stations_near_house table.
     for line, station, walk_min in stations:
+        insert_data = {
+            'house_id': house_info.house_id,
+            'line_name': f"'{line}'",
+            'station_name': f"'{station}'",
+            'walk_distance_in_minute': walk_min
+        }
         row_count = dbutil.insert_table(
-            val_map={
-                'house_id': house_info.house_id,
-                'line_name': f"'{line}'",
-                'station_name': f"'{station}'",
-                'walk_distance_in_minute': walk_min
-            },
+            val_map=insert_data,
             table_name='lifull_stations_near_house',
-            cur=cur
+            cur=cur,
+            on_duplicate_update_val_map=insert_data
         )
         cnx.commit()
-        if row_count < 0:
-            logging.error(f'Station Info for house_id {house_info.house_id} is not inserted: {line}, {station}, {walk_min}')
+        if row_count <= 0:
+            logging.error(
+                f'Station Info for house_id {house_info.house_id} is not inserted: {line}, {station}, {walk_min}')
 
 
 def process_house_info(house_id, response, cnx, cur):
