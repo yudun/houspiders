@@ -120,7 +120,7 @@ def main(house_links_file_path, output_file_path, strategy):
         available_house_df['is_pr_item'] = available_house_df['is_pr_item'].astype(bool)
 
         # Get 3 different groups of houses: new, removed, updated.
-        merged_df = new_house_link_df.merge(available_house_df, how='outer', on=['house_id'])
+        merged_df = new_house_link_df.merge(available_house_df, how='outer', on=['house_id'], suffixes=['_new', '_old'])
 
         newly_unavailable_house_df = merged_df[merged_df['is_pr_item_new'].isnull()]
         possible_new_house_df = merged_df[merged_df['is_pr_item_old'].isnull()]
