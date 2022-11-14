@@ -173,7 +173,7 @@ def update_house_price_if_changed(house_id, house_price, cnx, cur):
 
 
 def update_house_info_table(house_info, cnx, cur):
-    logging.debug(f'{house_info.house_id}: {house_info}')
+    logging.debug(f'Full infor for house_id {house_info.house_id}: {house_info}')
     pass
 
 
@@ -235,7 +235,7 @@ if __name__ == "__main__":
 
     file_paths = [join(parent_dir_path, f) for f in listdir(parent_dir_path)
                   if isfile(join(parent_dir_path, f)) and f.endswith('.html')]
-    for file_path in file_paths[:1]:
+    for file_path in file_paths:
         house_id = basename(file_path).replace('.html', '')
         with open(file_path, 'r') as f:
             logging.debug(f'process_house_info for {file_path}')
