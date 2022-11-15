@@ -154,7 +154,7 @@ class HouseInfo:
         self.trade_method = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-taiyou::text').get())
 
     def __str__(self):
-        return json.dumps(self.__dict__, indent=2, ensure_ascii=False, cls=utils.NpEncoder)
+        return json.dumps(self.__dict__, indent=2, ensure_ascii=False)
 
 
 def process_unavailable_house(house_id, cnx, cur):
@@ -163,7 +163,7 @@ def process_unavailable_house(house_id, cnx, cur):
     """
     rowcount = dbutil.update_table(val_map={
         'is_available': 0,
-        'unavailable_date': f"'{utils.get_date_str_today()}'"
+        'unavailable_date': utils.get_date_str_today()
     },
         where_clause=f'house_id={house_id}',
         table_name='lifull_house_link',
@@ -182,11 +182,11 @@ def update_house_price_if_changed(house_id, house_price, cnx, cur):
     all_rows = cur.fetchall()
     rowcount = 0
     # If current price is different from latest or no record.
-    if len(all_rows) == 0 or all_rows[-1][0] != house_price:
+    if len(all_rows) == 0 or int(all_rows[-1][0]) != house_price:
         insert_data = {
             'house_id': house_id,
             'price': house_price,
-            'price_date': f"'{utils.get_date_str_today()}'"
+            'price_date': utils.get_date_str_today()
         }
         rowcount = dbutil.insert_table(val_map=insert_data,
                                        table_name='lifull_house_price_history',
@@ -214,11 +214,12 @@ def update_house_info_table(house_info, cnx, cur):
     )
     cnx.commit()
     if row_count <= 0:
-        logging.error(f'House Info for house_id {house_info.house_id} is not inserted.')
+        logging.error(f'house_id {house_info.house_id}: House Info is not inserted.')
     else:
-        logging.info(f'House Info for house_id {house_info.house_id} is inserted.')
+        logging.info(f'house_id {house_info.house_id}: House Info is inserted.')
 
     # Update stations info in lifull_stations_near_house table.
+    num_inserted_station = 0
     for line, station, walk_min in stations:
         insert_data = {
             'house_id': house_info.house_id,
@@ -235,7 +236,10 @@ def update_house_info_table(house_info, cnx, cur):
         cnx.commit()
         if row_count <= 0:
             logging.error(
-                f'Station Info for house_id {house_info.house_id} is not inserted: {line}, {station}, {walk_min}')
+                f'house_id {house_info.house_id}: Station Info is not inserted: {line}, {station}, {walk_min}')
+        else:
+            num_inserted_station += 1
+    logging.info(f'house_id {house_info.house_id}: {num_inserted_station} stations are inserted.')
 
 
 def process_house_info(house_id, response, cnx, cur):

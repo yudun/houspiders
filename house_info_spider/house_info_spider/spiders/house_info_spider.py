@@ -47,7 +47,7 @@ class HouseInfoSpider(scrapy.Spider):
         logging.info(f'Total {len(df)} houses will be scrawled.')
         for index, row in df.iterrows():
             yield scrapy.Request(url=utils.get_lifull_url_from_house_id(row.house_id), callback=self.parse_house_info,
-                                 cb_kwargs={'house_id': row.house_id})
+                                 cb_kwargs={'house_id': str(row.house_id)})
 
     def parse_house_info(self, response, house_id):
         if response.status == 404 or response.css('.mod-expiredInformation').get() is not None:
@@ -64,7 +64,7 @@ class HouseInfoSpider(scrapy.Spider):
         # Mark it as available in `house_link` table;
         dbutil.update_table(val_map={
             'is_available': 1,
-            'unavailable_date': 'null'
+            'unavailable_date': None
         },
             where_clause=f'house_id={house_id}',
             table_name='lifull_house_link',
