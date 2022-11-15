@@ -23,32 +23,29 @@ def handle_possible_new_house_df(df, cnx):
     success_added_rowcount = 0
     success_updated_rowcount = 0
     for index, row in df.iterrows():
-        rowcount = dbutil.insert_table(val_map={
-            'house_id': row.house_id,
+        update_data = {
             'is_pr_item': row.is_pr_item_new,
-            'listing_house_name': f"'{row.listing_house_name}'",
+            'listing_house_name': row.listing_house_name,
             'listing_house_price': row.listing_house_price_new,
-            'sale_category': f"'{row.sale_category}'",
-            'city': f"'{row.city}'",
+            'sale_category': row.sale_category,
+            'city': row.city,
             'is_available': 1,
-            'first_available_date': f"'{date_today_str}'",
-            'unavailable_date': 'null'
-        },
+            'unavailable_date': None
+        }
+        rowcount = dbutil.insert_table(val_map={
+                'house_id': row.house_id,
+                'first_available_date': date_today_str,
+                **update_data
+            },
             table_name='lifull_house_link',
             cur=cur,
-            on_duplicate_update_val_map={
-                'is_pr_item': row.is_pr_item_new,
-                'listing_house_name': f"'{row.listing_house_name}'",
-                'listing_house_price': row.listing_house_price_new,
-                'sale_category': f"'{row.sale_category}'",
-                'city': f"'{row.city}'",
-                'is_available': 1,
-                'unavailable_date': 'null'})
+            on_duplicate_update_val_map=update_data)
         if rowcount == 1:
             success_added_rowcount += 1
         elif rowcount == 2:
             success_updated_rowcount += 1
-
+            
+        logging.info(f'handle_possible_new_house_df: rowcount={rowcount}, house_id:{row.house_id}')
         # Commit the changes
         cnx.commit()
 
@@ -64,18 +61,18 @@ def handle_updated_house_df(df, cnx):
     for index, row in df.iterrows():
         rowcount = dbutil.update_table(val_map={
             'is_pr_item': row.is_pr_item_new,
-            'listing_house_name': f"'{row.listing_house_name}'",
+            'listing_house_name': row.listing_house_name,
             'listing_house_price': row.listing_house_price_new,
-            'sale_category': f"'{row.sale_category}'",
-            'city': f"'{row.city}'",
+            'sale_category': row.sale_category,
+            'city': row.city,
             'is_available': 1,
-            'unavailable_date': 'null'
+            'unavailable_date': None
         },
         where_clause=f'house_id={row.house_id}',
         table_name='lifull_house_link',
         cur=cur)
         success_updated_rowcount += rowcount
-        logging.debug(f'update_rowcount={rowcount}, {row.listing_house_name}')
+        logging.info(f'handle_updated_house_df: rowcount={rowcount}, house_id:{row.house_id}')
 
         # Commit the changes
         cnx.commit()
@@ -103,11 +100,14 @@ def main(house_links_file_path, output_file_path, strategy):
     new_house_link_df = pd.read_csv(house_links_file_path)
     num_duplicated_new_houses = len(
         new_house_link_df[new_house_link_df.duplicated(['house_id'], keep=False)]['house_id'].unique())
+
+
     new_house_link_df.sort_values(by=['house_id', 'is_pr_item'],
                                   ascending=[True, False],
                                   na_position='last',
                                   inplace=True)
     new_house_link_df.drop_duplicates('house_id', inplace=True)
+    logging.info(f'{num_duplicated_new_houses} duplicated houses and {len(new_house_link_df)} unique houses found from {house_links_file_path}.')
 
     # Connect to the database
     cnx = dbutil.get_mysql_cnx()
@@ -116,6 +116,7 @@ def main(house_links_file_path, output_file_path, strategy):
     available_house_df = pd.read_sql(
         'SELECT house_id, is_pr_item, listing_house_price FROM lifull_house_link WHERE is_available', cnx)
     if len(available_house_df) > 0:
+        logging.info(f'{len(available_house_df)} houses read from database.')
         available_house_df['house_id'] = available_house_df['house_id'].astype(int)
         available_house_df['is_pr_item'] = available_house_df['is_pr_item'].astype(bool)
 
@@ -128,6 +129,7 @@ def main(house_links_file_path, output_file_path, strategy):
         updated_house_df = updated_house_df[(updated_house_df['is_pr_item_new'] != updated_house_df['is_pr_item_old']) | (
                 updated_house_df['listing_house_price_new'] != updated_house_df['listing_house_price_old'])]
     else:
+        logging.info('No available houses read from database.')
         newly_unavailable_house_df = None
         possible_new_house_df = new_house_link_df
         possible_new_house_df['is_pr_item_new'] = possible_new_house_df['is_pr_item']

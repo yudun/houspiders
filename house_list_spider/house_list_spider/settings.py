@@ -99,3 +99,8 @@ LOG_LEVEL = 'INFO'
 # Set settings whose default value is deprecated to a future-proof value
 REQUEST_FINGERPRINTER_IMPLEMENTATION = '2.7'
 TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
+
+# AUTOTHROTTLE Settings
+AUTOTHROTTLE_ENABLED = True
+AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
+DOWNLOAD_DELAY = 0.25

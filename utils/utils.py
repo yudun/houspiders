@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import datetime
+import pytz
 import re
 import logging
 import numpy as np
@@ -22,7 +23,7 @@ def get_lifull_url_from_house_id(house_id):
 
 
 def get_date_str_today():
-    return date.today().strftime("%Y-%m-%d")
+    return datetime.now(tz=pytz.timezone('America/Los_Angeles')).strftime("%Y-%m-%d")
 
 
 def get_int_from_text(item):

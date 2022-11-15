@@ -206,16 +206,6 @@ def update_house_info_table(house_info, cnx, cur):
     stations = insert_data['stations']
     del insert_data['stations']
 
-    for k in insert_data:
-        # Replace None as 'null' before insert into house_info table
-        if insert_data[k] is None:
-            insert_data[k] = 'null'
-        elif isinstance(insert_data[k], bool):
-            insert_data[k] = 1 if insert_data[k] else 0
-        elif isinstance(insert_data[k], str):
-            insert_data[k] = insert_data[k].replace("'", "\\\'")
-            insert_data[k] = f"'{insert_data[k]}'"
-
     row_count = dbutil.insert_table(
         val_map=insert_data,
         table_name='lifull_house_info',
@@ -232,8 +222,8 @@ def update_house_info_table(house_info, cnx, cur):
     for line, station, walk_min in stations:
         insert_data = {
             'house_id': house_info.house_id,
-            'line_name': f"'{line}'",
-            'station_name': f"'{station}'",
+            'line_name': line,
+            'station_name': station,
             'walk_distance_in_minute': walk_min
         }
         row_count = dbutil.insert_table(
