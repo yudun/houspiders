@@ -192,6 +192,10 @@ def update_house_price_if_changed(house_id, house_price, cnx, cur):
                                        table_name='lifull_house_price_history',
                                        cur=cur,
                                        on_duplicate_update_val_map=insert_data)
+        if rowcount <= 0:
+            logging.error(f'house_id {house_id}: New price fails to update.')
+        else:
+            logging.info(f'house_id {house_id}: New price is updated.')
         # Commit the changes
         cnx.commit()
     return rowcount
