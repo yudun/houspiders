@@ -1,5 +1,5 @@
 """
-scrapy crawl house_list -o output/house_links.csv --logfile log/log.txt
+scrapy crawl house_list -o output/2022-11-14/house_links.csv --logfile log/2022-11-14-log.txt
 """
 import scrapy
 import re
