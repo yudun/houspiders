@@ -259,7 +259,8 @@ def update_house_info_table(house_info, cnx, cur):
                 f'house_id {house_info.house_id}: Station Info is not inserted: {line}, {station}, {walk_min}')
         else:
             num_inserted_station += 1
-    logging.info(f'house_id {house_info.house_id}: {num_inserted_station} stations are inserted.')
+    if num_inserted_station > 0:
+        logging.info(f'house_id {house_info.house_id}: {num_inserted_station} stations are inserted.')
 
 
 def process_house_info(house_id, response, cnx, cur):
