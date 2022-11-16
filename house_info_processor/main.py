@@ -82,9 +82,12 @@ class HouseInfo:
             self.build_date = date(int(tmp_l[0]), int(tmp_l[1]), 1).strftime("%Y-%m-%d")
         tmp_l = re.findall(r'築\d+年', build_date_str)
         if len(tmp_l) != 1:
-            self.num_null_fields += 1
-            logging.error(f'{house_id}: error parse build_age {build_date_str})')
-            self.age = None
+            if len(re.findall(r'新築', build_date_str)) > 0:
+                self.age = 0
+            else:
+                self.num_null_fields += 1
+                logging.error(f'{house_id}: error parse build_age {build_date_str})')
+                self.age = None
         else:
             self.age = utils.get_int_from_text(tmp_l[0])
 
@@ -145,7 +148,8 @@ class HouseInfo:
 
         self.other_fee_details = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-moneyother::text').get(),
                                                  do_not_count_null=True)
-        other_fees = [] if self.other_fee_details is None else self.other_fee_details.split('円')
+
+        other_fees = [] if self.other_fee_details is None else re.findall(r'\d*,?\d+円', self.other_fee_details)
         self.total_other_fee = sum(utils.get_int_from_text(x) for x in other_fees)
 
         self.manage_details = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-management::text').get())
