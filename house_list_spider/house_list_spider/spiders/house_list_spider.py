@@ -2,6 +2,7 @@
 scrapy crawl house_list -O output/2022-11-14/house_links.csv --logfile log/2022-11-14-log.txt
 """
 import scrapy
+from scrapy import signals
 import re
 import logging
 import sys
@@ -17,6 +18,19 @@ class HouseListSpider(scrapy.Spider):
     name = 'house_list'
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/48.0'
 
+    def __init__(self, **kw):
+        super(HouseListSpider, self).__init__(**kw)
+        self.failed_pages_list = []
+
+    @classmethod
+    def from_crawler(cls, crawler, *args, **kwargs):
+        spider = super(HouseListSpider, cls).from_crawler(crawler, *args, **kwargs)
+        crawler.signals.connect(spider.spider_closed, signal=signals.spider_closed)
+        return spider
+
+    def spider_closed(self, spider):
+        logging.error(f'These urls are not crawled: {self.failed_pages_list}')
+
     def start_requests(self):
         for url in HOUSE_LIST_START_URL_LIST:
             yield scrapy.Request(url=url, callback=self.fanout_list_page)
@@ -27,7 +41,8 @@ class HouseListSpider(scrapy.Spider):
         num_pages = int(response.css('.lastPage>span::text').get())
         logging.info(f'Total {total_num_house} houses and {num_pages} pages found.')
         for page_index in range(num_pages):
-            yield scrapy.Request(url=f'{response.url}?page={page_index + 1}', callback=self.parse_list_page)
+            yield scrapy.Request(url=f'{response.url}?page={page_index + 1}', callback=self.parse_list_page,
+                                 errback=self.errback_httpbin)
 
     # # Step 2. Parse each house listing page and extract house_id
     def parse_list_page(self, response):
@@ -52,7 +67,8 @@ class HouseListSpider(scrapy.Spider):
             if len(house_item_list) > 0:
                 for house_item in house_item_list:
                     house_link_list.append(house_item.css('.detail>a::attr("href")').get())
-                    house_listing_price_list.append(utils.get_int_from_text(house_item.css('.priceLabel>span.num::text').get()))
+                    house_listing_price_list.append(
+                        utils.get_int_from_text(house_item.css('.priceLabel>span.num::text').get()))
             # Otherwise it only has one house_link
             else:
                 if len(house.css('a.detailLink::attr("href")')) > 0:
@@ -88,3 +104,8 @@ class HouseListSpider(scrapy.Spider):
                 num_house_on_the_page += 1
 
         logging.info(f'Finish crawling {request_url} with {num_house_on_the_page} house found.')
+
+    def errback_httpbin(self, failure):
+        # log all failures
+        logging.error(repr(failure))
+        self.failed_pages_list.append(failure.request.url)

@@ -101,8 +101,12 @@ class HouseInfoSpider(scrapy.Spider):
     def parse_house_info(self, response, house_id):
         logging.info(f'Start crawling {house_id}')
         if response.status == 404 or response.css('.mod-expiredInformation').get() is not None:
-            process_unavailable_house(house_id, self.cnx, self.cur)
-            self.new_unavailable_house_num += 1
+            row_count = process_unavailable_house(house_id, self.cnx, self.cur)
+            if row_count > 0:
+                self.new_unavailable_house_num += 1
+                logging.info(f'{house_id} has been marked as unavailable.')
+            else:
+                logging.error(f'{house_id} fail to be marked as unavailable.')
             return
         elif len(response.css('.mod-detailTopSale')) != 1:
             logging.error(f'House is in wrong format: {response.url}')
