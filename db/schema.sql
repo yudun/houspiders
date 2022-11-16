@@ -64,3 +64,13 @@ CREATE TABLE IF NOT EXISTS lifull_house_info (
 	latest_rent_status VARCHAR(32),
 	trade_method VARCHAR(32)
 );
+
+CREATE TABLE IF NOT EXISTS lifull_crawler_stats (
+	crawl_date DATE NOT NULL PRIMARY KEY,
+	category VARCHAR(255) NOT NULL,
+	city VARCHAR(255) NOT NULL,
+	new_added_house_num INT NOT NULL DEFAULT 0,
+	new_unavailable_become_available_house_num INT NOT NULL DEFAULT 0,
+	updated_house_num INT NOT NULL DEFAULT 0,
+	new_unavailable_house_num INT NOT NULL DEFAULT 0
+);

@@ -1,5 +1,8 @@
 """
-python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_links.csv -o output/2022-11-14/house_id_to_crawl.csv --logfile log/2022-11-14-log.txt
+python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_links.csv \
+-o output/2022-11-14/house_id_to_crawl.csv --logfile log/2022-11-14-log.txt \
+--crawl_date 2022-11-14 --category mansion_chuko --city tokyo
+--
 """
 import csv
 import getopt
@@ -33,10 +36,10 @@ def handle_possible_new_house_df(df, cnx):
             'unavailable_date': None
         }
         rowcount = dbutil.insert_table(val_map={
-                'house_id': row.house_id,
-                'first_available_date': date_today_str,
-                **update_data
-            },
+            'house_id': row.house_id,
+            'first_available_date': date_today_str,
+            **update_data
+        },
             table_name='lifull_house_link',
             cur=cur,
             on_duplicate_update_val_map=update_data)
@@ -44,7 +47,7 @@ def handle_possible_new_house_df(df, cnx):
             success_added_rowcount += 1
         elif rowcount == 2:
             success_updated_rowcount += 1
-            
+
         logging.info(f'handle_possible_new_house_df: rowcount={rowcount}, house_id:{row.house_id}')
         # Commit the changes
         cnx.commit()
@@ -68,9 +71,9 @@ def handle_updated_house_df(df, cnx):
             'is_available': 1,
             'unavailable_date': None
         },
-        where_clause=f'house_id={row.house_id}',
-        table_name='lifull_house_link',
-        cur=cur)
+            where_clause=f'house_id={row.house_id}',
+            table_name='lifull_house_link',
+            cur=cur)
         success_updated_rowcount += rowcount
         logging.info(f'handle_updated_house_df: rowcount={rowcount}, house_id:{row.house_id}')
 
@@ -80,7 +83,7 @@ def handle_updated_house_df(df, cnx):
     return success_updated_rowcount
 
 
-def main(house_links_file_path, output_file_path, strategy):
+def main(house_links_file_path, output_file_path, strategy, crawl_date, category, city):
     """
      1. Add new listed houses to `house_link` table and put them into feed
      2. For those houses with updated price or was unavailable,
@@ -101,13 +104,13 @@ def main(house_links_file_path, output_file_path, strategy):
     num_duplicated_new_houses = len(
         new_house_link_df[new_house_link_df.duplicated(['house_id'], keep=False)]['house_id'].unique())
 
-
     new_house_link_df.sort_values(by=['house_id', 'is_pr_item'],
                                   ascending=[True, False],
                                   na_position='last',
                                   inplace=True)
     new_house_link_df.drop_duplicates('house_id', inplace=True)
-    logging.info(f'{num_duplicated_new_houses} duplicated houses and {len(new_house_link_df)} unique houses found from {house_links_file_path}.')
+    logging.info(
+        f'{num_duplicated_new_houses} duplicated houses and {len(new_house_link_df)} unique houses found from {house_links_file_path}.')
 
     # Connect to the database
     cnx = dbutil.get_mysql_cnx()
@@ -126,8 +129,9 @@ def main(house_links_file_path, output_file_path, strategy):
         newly_unavailable_house_df = merged_df[merged_df['is_pr_item_new'].isnull()]
         possible_new_house_df = merged_df[merged_df['is_pr_item_old'].isnull()]
         updated_house_df = merged_df.dropna()
-        updated_house_df = updated_house_df[(updated_house_df['is_pr_item_new'] != updated_house_df['is_pr_item_old']) | (
-                updated_house_df['listing_house_price_new'] != updated_house_df['listing_house_price_old'])]
+        updated_house_df = updated_house_df[
+            (updated_house_df['is_pr_item_new'] != updated_house_df['is_pr_item_old']) | (
+                    updated_house_df['listing_house_price_new'] != updated_house_df['listing_house_price_old'])]
     else:
         logging.info('No available houses read from database.')
         newly_unavailable_house_df = None
@@ -142,7 +146,8 @@ def main(house_links_file_path, output_file_path, strategy):
 
     # 2. Handle possible_new_house_df
     if possible_new_house_df is not None:
-        success_added_rowcount, success_updated_available_rowcount = handle_possible_new_house_df(possible_new_house_df, cnx)
+        success_added_rowcount, success_updated_available_rowcount = handle_possible_new_house_df(possible_new_house_df,
+                                                                                                  cnx)
         output_house_ids += list(possible_new_house_df['house_id'])
 
     # 2. Handle updated_house_df
@@ -153,12 +158,27 @@ def main(house_links_file_path, output_file_path, strategy):
     if strategy == 'all':
         output_house_ids = list(new_house_link_df['house_id'])
 
-    # Close the database connection
-    cnx.close()
-
     logging.info(f'success_added_rowcount:{success_added_rowcount}, '
                  f'success_updated_available_rowcount: {success_updated_available_rowcount}, '
                  f'success_updated_rowcount: {success_updated_rowcount}')
+
+    cur = cnx.cursor(buffered=True)
+    insert_data = {
+        'crawl_date': crawl_date,
+        'category': category,
+        'city': city,
+        'new_added_house_num': success_added_rowcount,
+        'new_unavailable_become_available_house_num': success_updated_available_rowcount,
+        'updated_house_num': success_updated_rowcount
+    }
+    dbutil.insert_table(val_map=insert_data,
+                        table_name='lifull_crawler_stats',
+                        cur=cur,
+                        on_duplicate_update_val_map=insert_data)
+    cnx.commit()
+
+    # Close the database connection
+    cnx.close()
 
     # Write output_house_ids to output_file_path
     with open(output_file_path, 'w+') as f:
@@ -176,8 +196,12 @@ if __name__ == "__main__":
     strategy = 'update_only'
     log_file = ''
     loglevel = logging.INFO
+    crawl_date = ''
+    category = ''
+    city = ''
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hi:o:s:l:", ["ifile=", "ofile=", "strategy=", "logfile=", "loglevel="])
+        opts, args = getopt.getopt(sys.argv[1:], "hi:o:s:l:",
+                                   ["ifile=", "ofile=", "strategy=", "logfile=", "loglevel="])
     except getopt.GetoptError:
         print(usage)
         sys.exit(2)
@@ -195,8 +219,14 @@ if __name__ == "__main__":
             log_file = arg
         elif opt in ("--loglevel"):
             loglevel = utils.get_log_level_from_str(arg)
+        elif opt in ("--crawl_date"):
+            crawl_date = arg
+        elif opt in ("--category"):
+            category = arg
+        elif opt in ("--city"):
+            city = arg
     assert strategy in ('update_only', 'all')
-    if house_links_file_path == '' or output_file_path == '' or log_file == '':
+    if house_links_file_path == '' or output_file_path == '' or log_file == '' or crawl_date == '' or category == '' or city == '':
         print(usage)
         sys.exit(2)
 
@@ -211,4 +241,4 @@ if __name__ == "__main__":
                         filemode='w',
                         filename=log_file)
 
-    main(house_links_file_path, output_file_path, strategy)
+    main(house_links_file_path, output_file_path, strategy, crawl_date, category, city)

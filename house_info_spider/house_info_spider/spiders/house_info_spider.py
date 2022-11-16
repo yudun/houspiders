@@ -1,6 +1,13 @@
 """
-scrapy crawl house_info -O output/2022-11-15/error_house_id1.csv -a i=/home/ubuntu/houspiders/house_list_processor/output/2022-11-15/house_id_to_crawl.csv -a m=original --logfile log/2022-11-15-log1.txt
-scrapy crawl house_info -O output/2022-11-15/error_house_id2.csv -a i=output/2022-11-15/error_house_id1.csv -a m=error --logfile log/2022-11-15-log2.txt
+scrapy crawl house_info -O output/2022-11-15/error_house_id1.csv \
+-a i=/home/ubuntu/houspiders/house_list_processor/output/2022-11-15/house_id_to_crawl.csv -a m=original \
+-a crawl_date=2022-11-15 -a category=mansion_chuko -a city=tokyo \
+--logfile log/2022-11-15-log1.txt
+
+scrapy crawl house_info -O output/2022-11-15/error_house_id2.csv \
+-a i=output/2022-11-15/error_house_id1.csv -a m=error \
+-a crawl_date=2022-11-15 -a category=mansion_chuko -a city=tokyo \
+--logfile log/2022-11-15-log2.txt
 """
 import scrapy
 from scrapy import signals
@@ -25,13 +32,17 @@ class HouseInfoSpider(scrapy.Spider):
     handle_httpstatus_list = [404]
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/48.0'
 
-    def __init__(self, i, m, **kw):
+    def __init__(self, i, m, crawl_date, category, city, **kw):
         self.house_link_file_path = i
         self.mode = m
+        self.crawl_date = crawl_date
+        self.category = category
+        self.city = city
         super(HouseInfoSpider, self).__init__(**kw)
         # Init database connection
         self.cnx = None
         self.cur = None
+        self.new_unavailable_house_num = 0
 
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
@@ -46,6 +57,33 @@ class HouseInfoSpider(scrapy.Spider):
         self.cur = self.cnx.cursor(buffered=True)
 
     def spider_closed(self, spider):
+        logging.info(f'Total {self.new_unavailable_house_num} houses become unavailable today.')
+        stats_df = pd.read_sql(f"""SELECT new_unavailable_house_num 
+                    FROM lifull_crawler_stats 
+                    WHERE crawl_date = '{self.crawl_date}'
+                    AND category = '{self.category}'
+                    AND city = '{self.city}'
+                    """, self.cnx)
+        if len(stats_df) != 1:
+            logging.error(f'lifull_crawler_stats fail to update for {self.crawl_date} {self.category} {self.city}')
+            old_new_unavailable_house_num = 0
+        else:
+            old_new_unavailable_house_num = stats_df.loc[0].new_unavailable_house_num
+
+        new_unavailable_house_num = old_new_unavailable_house_num + self.new_unavailable_house_num
+        insert_data = {
+            'crawl_date': self.crawl_date,
+            'category': self.category,
+            'city': self.city,
+            'new_unavailable_house_num': new_unavailable_house_num
+        }
+        dbutil.insert_table(val_map=insert_data,
+                            table_name='lifull_crawler_stats',
+                            cur=self.cur,
+                            on_duplicate_update_val_map=insert_data)
+        self.cnx.commit()
+        logging.info(f'{new_unavailable_house_num} new_unavailable_house_num updated in lifull_crawler_stats for {self.crawl_date} {self.category} {self.city}')
+
         self.cnx.close()
 
     def start_requests(self):
@@ -64,6 +102,7 @@ class HouseInfoSpider(scrapy.Spider):
         logging.info(f'Start crawling {house_id}')
         if response.status == 404 or response.css('.mod-expiredInformation').get() is not None:
             process_unavailable_house(house_id, self.cnx, self.cur)
+            self.new_unavailable_house_num += 1
             return
         elif len(response.css('.mod-detailTopSale')) != 1:
             logging.error(f'House is in wrong format: {response.url}')
