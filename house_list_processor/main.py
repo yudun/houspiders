@@ -1,5 +1,5 @@
 """
-python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_links.csv -o output/house_id_to_crawl.csv --logfile log/log.txt
+python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_links.csv -o output/2022-11-14/house_id_to_crawl.csv --logfile log/2022-11-14-log.txt
 """
 import csv
 import getopt
@@ -205,7 +205,9 @@ if __name__ == "__main__":
     print('Strategy used:', strategy)
     print('Log to file:', log_file)
 
-    logging.basicConfig(level=loglevel,
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        level=loglevel,
                         filemode='w',
                         filename=log_file)
 

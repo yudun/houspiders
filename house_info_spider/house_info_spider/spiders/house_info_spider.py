@@ -1,11 +1,16 @@
 """
-scrapy crawl house_info -a i=/home/ubuntu/houspiders/house_list_processor/output/house_id_to_crawl.csv --logfile log/log.txt
+scrapy crawl house_info -O output/2022-11-15/error_house_id1.csv -a i=/home/ubuntu/houspiders/house_list_processor/output/2022-11-15/house_id_to_crawl.csv -a m=original --logfile log/2022-11-15-log1.txt
+scrapy crawl house_info -O output/2022-11-15/error_house_id2.csv -a i=output/2022-11-15/error_house_id1.csv -a m=error --logfile log/2022-11-15-log2.txt
 """
 import scrapy
 from scrapy import signals
 import pandas as pd
 import logging
 import sys
+
+from scrapy.spidermiddlewares.httperror import HttpError
+from twisted.internet.error import DNSLookupError
+from twisted.internet.error import TimeoutError, TCPTimedOutError
 
 sys.path.append('../')
 
@@ -20,8 +25,9 @@ class HouseInfoSpider(scrapy.Spider):
     handle_httpstatus_list = [404]
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/48.0'
 
-    def __init__(self, i, **kw):
+    def __init__(self, i, m, **kw):
         self.house_link_file_path = i
+        self.mode = m
         super(HouseInfoSpider, self).__init__(**kw)
         # Init database connection
         self.cnx = None
@@ -44,12 +50,18 @@ class HouseInfoSpider(scrapy.Spider):
 
     def start_requests(self):
         df = pd.read_csv(self.house_link_file_path)
+        if self.mode == 'error':
+            # The error_house_id csv may contain duplicates
+            df = df.drop_duplicates(subset=['house_id'])
         logging.info(f'Total {len(df)} houses will be scrawled.')
+
         for index, row in df.iterrows():
             yield scrapy.Request(url=utils.get_lifull_url_from_house_id(row.house_id), callback=self.parse_house_info,
+                                 errback=self.errback_httpbin,
                                  cb_kwargs={'house_id': str(row.house_id)})
 
     def parse_house_info(self, response, house_id):
+        logging.info(f'Start crawling {house_id}')
         if response.status == 404 or response.css('.mod-expiredInformation').get() is not None:
             process_unavailable_house(house_id, self.cnx, self.cur)
             return
@@ -59,7 +71,7 @@ class HouseInfoSpider(scrapy.Spider):
 
         with open(f'output/raw_html/{house_id}.html', 'wb') as html_file:
             html_file.write(response.body)
-        logging.info(f'{response.url} has been saved locally.')
+        logging.info(f'{house_id} has been saved locally.')
 
         # Mark it as available in `house_link` table;
         dbutil.update_table(val_map={
@@ -72,3 +84,35 @@ class HouseInfoSpider(scrapy.Spider):
         self.cnx.commit()
 
         process_house_info(house_id, response, self.cnx, self.cur)
+        logging.info(f'Finish processing {house_id}')
+    
+    def errback_httpbin(self, failure):
+        # log all failures
+        logging.error(repr(failure))
+        house_id = failure.request.cb_kwargs['house_id']
+
+        # In case you want to do something special for some errors,
+        # you may need the failure's type:
+        if failure.check(HttpError):
+            # these exceptions come from HttpError spider middleware
+            # you can get the non-200 response
+            response = failure.value.response
+            logging.error('HttpError on %s', response.url)
+            fail_reason = 'HttpError'
+
+        elif failure.check(DNSLookupError):
+            # this is the original request
+            request = failure.request
+            logging.error('DNSLookupError on %s', request.url)
+            fail_reason = 'DNSLookupError'
+
+        elif failure.check(TimeoutError, TCPTimedOutError):
+            request = failure.request
+            logging.error('TimeoutError on %s', request.url)
+            fail_reason = 'TimeoutError'
+        else:
+            fail_reason = 'Other'
+
+        yield {'house_id': house_id,
+               'fail_reason': fail_reason}
+        

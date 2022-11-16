@@ -12,20 +12,26 @@ def get_date_str_today():
     return datetime.now(tz=pytz.timezone('America/Los_Angeles')).strftime("%Y-%m-%d")
 
 
-def get_int_from_text(item):
+def get_int_from_text(item, empty_str_to_none=False):
     if isinstance(item, str):
         parsed_str = ''.join(re.findall(r'\d+', item))
         if parsed_str == '':
-            return 0
+            if empty_str_to_none:
+                return None
+            else:
+                return 0
         return int(parsed_str)
     return None
 
 
-def get_float_from_text(item):
+def get_float_from_text(item, empty_str_to_none=False):
     if isinstance(item, str):
         parsed_str = ''.join(re.findall(r'\d*[.\d+]', item))
         if parsed_str == '':
-            return 0
+            if empty_str_to_none:
+                return None
+            else:
+                return 0
         return float(parsed_str)
     return None
 
