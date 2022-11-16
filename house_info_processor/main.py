@@ -92,7 +92,7 @@ class HouseInfo:
             self.age = utils.get_int_from_text(tmp_l[0])
 
         self.window_angle = self.safe_strip(detailTopSale.css('#chk-bkc-windowangle::text').get(),
-                                         do_not_count_null=True)
+                                            do_not_count_null=True)
         self.house_area = utils.get_float_from_text(
             self.safe_strip(detailTopSale.css('#chk-bkc-housearea::text').get()))
         self.balcony_area = utils.get_float_from_text(
@@ -132,7 +132,7 @@ class HouseInfo:
                 self.num_null_fields += 1
             else:
                 self.floor_num = utils.get_int_from_text(floor_num_l[0], empty_str_to_none=True)
-                
+
             if len(num_total_floor_l) != 1:
                 self.num_null_fields += 1
             else:
@@ -140,9 +140,9 @@ class HouseInfo:
 
         self.structure = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-housekouzou::text').get())
         self.land_usage = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landyouto::text').get(),
-                                         do_not_count_null=True)
+                                          do_not_count_null=True)
         self.land_position = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landchisei::text').get(),
-                                         do_not_count_null=True)
+                                             do_not_count_null=True)
         self.land_right = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landright::text').get())
         land_moneyshakuchi = bukkenSpecDetail.css('#chk-bkd-moneyshakuchi::text').get()
         self.land_moneyshakuchi = None if land_moneyshakuchi is None else utils.get_int_from_text(
@@ -198,9 +198,9 @@ def update_house_price_if_changed(house_id, house_price, cnx, cur):
             'price_date': utils.get_date_str_today()
         }
         row_count = dbutil.insert_table(val_map=insert_data,
-                                       table_name='lifull_house_price_history',
-                                       cur=cur,
-                                       on_duplicate_update_val_map=insert_data)
+                                        table_name='lifull_house_price_history',
+                                        cur=cur,
+                                        on_duplicate_update_val_map=insert_data)
         if row_count <= 0:
             logging.error(f'house_id {house_id}: New price fails to update.')
         elif row_count == 1:
