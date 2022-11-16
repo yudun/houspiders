@@ -68,7 +68,7 @@ class HouseInfoSpider(scrapy.Spider):
             logging.error(f'lifull_crawler_stats fail to update for {self.crawl_date} {self.category} {self.city}')
             old_new_unavailable_house_num = 0
         else:
-            old_new_unavailable_house_num = stats_df.loc[0].new_unavailable_house_num
+            old_new_unavailable_house_num = int(stats_df.loc[0].new_unavailable_house_num)
 
         new_unavailable_house_num = old_new_unavailable_house_num + self.new_unavailable_house_num
         insert_data = {
