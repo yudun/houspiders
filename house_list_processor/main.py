@@ -6,6 +6,7 @@ python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14
 """
 import csv
 import getopt
+import os
 import sys
 import pandas as pd
 import logging
@@ -142,7 +143,9 @@ def main(house_links_file_path, output_file_path, strategy, crawl_date, category
 
     # 1. Handle newly_unavailable_house_df: simply put them into feed;
     if newly_unavailable_house_df is not None:
-        output_house_ids += list(newly_unavailable_house_df['house_id'])
+        newly_unavailable_house_list = list(newly_unavailable_house_df['house_id'])
+        output_house_ids += newly_unavailable_house_list
+        logging.info(f'{len(newly_unavailable_house_list)} newly unavailable houses:' + str(newly_unavailable_house_list))
 
     # 2. Handle possible_new_house_df
     if possible_new_house_df is not None:
@@ -179,6 +182,9 @@ def main(house_links_file_path, output_file_path, strategy, crawl_date, category
 
     # Close the database connection
     cnx.close()
+    
+    # Create the parent path if not exist
+    os.makedirs(os.path.dirname(output_file_path))
 
     # Write output_house_ids to output_file_path
     with open(output_file_path, 'w+') as f:
@@ -201,7 +207,7 @@ if __name__ == "__main__":
     city = ''
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hi:o:s:l:",
-                                   ["ifile=", "ofile=", "strategy=", "logfile=", "loglevel="])
+                                   ["ifile=", "ofile=", "strategy=", "logfile=", "loglevel=", "crawl_date=", "category=", "city="])
     except getopt.GetoptError:
         print(usage)
         sys.exit(2)
