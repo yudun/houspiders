@@ -29,7 +29,8 @@ class HouseListSpider(scrapy.Spider):
         return spider
 
     def spider_closed(self, spider):
-        logging.error(f'These urls are not crawled: {self.failed_pages_list}')
+        if len(self.failed_pages_list) > 0:
+            logging.error(f'These urls are not crawled: {self.failed_pages_list}')
 
     def start_requests(self):
         for url in HOUSE_LIST_START_URL_LIST:
