@@ -13,3 +13,7 @@ After you modify the volume size in frontend you should
 3. `crontab -e`
 4. `crontab -l` for listing all current cron jobs.
 
+# Set up Auto Delete logs older than 30d
+Add these to crontab
+`find /home/ubuntu/houspiders/house_list_spider/log/*  -mtime +30 -delete`
+`find /home/ubuntu/houspiders/house_list_spider/output/*  -mtime +30 -delete`
