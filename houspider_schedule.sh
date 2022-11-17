@@ -1,4 +1,6 @@
 #!/usr/bin/bash
+export PATH="/home/ubuntu/.autojump/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/ubuntu/.local/bin"
+
 today=$(TZ=America/Los_Angeles date '+%Y-%m-%d')
 
 # Run house_list_spider
