@@ -6,3 +6,10 @@ After you modify the volume size in frontend you should
 2. Extend the partition by typing `sudo growpart /dev/xvda 1`; Note that dev/xvda is the partition name and 1 is the partition number.
 3. Extend the volume by typing `sudo resize2fs /dev/xvda1`.
 4. Type `df -h` to check volume size; It will show 40GB of volume size.
+
+# Setup crontab
+1. `sudo apt install cron`
+2. `sudo systemctl enable cron`
+3. `crontab -e`
+4. `crontab -l` for listing all current cron jobs.
+
