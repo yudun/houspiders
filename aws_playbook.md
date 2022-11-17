@@ -10,7 +10,8 @@ After you modify the volume size in frontend you should
 # Setup crontab
 1. `sudo apt install cron`
 2. `sudo systemctl enable cron`
-3. `crontab -e`
+3. `crontab -e` 
+Remeber to copy and paste `export PATH="your current $PATH"` to the first line of your script to avoid command not found error.
 4. `crontab -l` for listing all current cron jobs.
 
 # Set up Auto Delete logs older than 30d
