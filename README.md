@@ -40,5 +40,5 @@ raw_html for each house item based on follow strategy:
 ## Data Analyser
 
 ### 1. daily_stats_runner
-We want to write the daily stats to a `house_daily_stats` table to learn
-how many houses were removed, added and updated price per geo.
+We want to write the daily stats to a `house_daily_stats` table to extract
+most valuable pending houses per geo.

@@ -1,11 +1,14 @@
 """
-scrapy crawl house_list -O output/2022-11-14/house_links.csv --logfile log/2022-11-14-log.txt
+scrapy crawl house_list -O output/2022-11-14/house_links.csv -a error_list_urls_path=output/2022-11-14/error_list_urls.csv \
+--logfile log/2022-11-14-log.txt
 """
 import scrapy
 from scrapy import signals
 import re
 import logging
 import sys
+import os
+import csv
 
 sys.path.append('../')
 
@@ -18,7 +21,8 @@ class HouseListSpider(scrapy.Spider):
     name = 'house_list'
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/48.0'
 
-    def __init__(self, **kw):
+    def __init__(self, error_list_urls_path, **kw):
+        self.error_list_urls_path = error_list_urls_path
         super(HouseListSpider, self).__init__(**kw)
         self.failed_pages_list = []
 
@@ -30,7 +34,17 @@ class HouseListSpider(scrapy.Spider):
 
     def spider_closed(self, spider):
         if len(self.failed_pages_list) > 0:
-            logging.error(f'These urls are not crawled: {self.failed_pages_list}')
+            logging.error(f'These {len(self.failed_pages_list)} urls are not crawled: {self.failed_pages_list}')
+            # Create the parent path if not exist
+            os.makedirs(os.path.dirname(self.error_list_urls_path), exist_ok=True)
+
+            # Write failed_pages_list to error_list_urls_path
+            with open(self.error_list_urls_path, 'w+') as f:
+                # using csv.writer method from CSV package
+                write = csv.writer(f)
+                write.writerow(['error_list_url'])
+                write.writerows([[x] for x in self.failed_pages_list])
+                logging.info(f'{len(self.failed_pages_list)} urls written to {self.error_list_urls_path}')
 
     def start_requests(self):
         for url in HOUSE_LIST_START_URL_LIST:

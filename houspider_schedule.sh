@@ -27,4 +27,6 @@ scrapy crawl house_info -O output/${today}/error_house_id2.csv \
 --logfile log/${today}-log2.txt
 
 # Send summary email
-
+cd /home/ubuntu/houspiders/house_info_spider/email_monitoring
+python3 ./main.py -m summary --crawl_date ${today}
+python3 ./main.py -m alert --crawl_date ${today}
