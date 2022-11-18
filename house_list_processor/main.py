@@ -184,7 +184,7 @@ def main(house_links_file_path, output_file_path, strategy, crawl_date, category
     cnx.close()
     
     # Create the parent path if not exist
-    os.makedirs(os.path.dirname(output_file_path))
+    os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
 
     # Write output_house_ids to output_file_path
     with open(output_file_path, 'w+') as f:
