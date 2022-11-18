@@ -5,7 +5,9 @@ today=$(TZ=America/Los_Angeles date '+%Y-%m-%d')
 
 # Run house_list_spider
 cd /home/ubuntu/houspiders/house_list_spider
-scrapy crawl house_list -O output/${today}/house_links.csv --logfile log/${today}-log.txt
+scrapy crawl house_list -O output/${today}/house_links.csv \
+-a error_list_urls_path=output/${today}/error_list_urls.csv \
+--logfile log/${today}-log.txt
 
 # Process the new house list
 cd /home/ubuntu/houspiders/house_list_processor
@@ -27,6 +29,6 @@ scrapy crawl house_info -O output/${today}/error_house_id2.csv \
 --logfile log/${today}-log2.txt
 
 # Send summary email
-cd /home/ubuntu/houspiders/house_info_spider/email_monitoring
+cd /home/ubuntu/houspiders/email_monitoring
 python3 ./main.py -m summary --crawl_date ${today}
 python3 ./main.py -m alert --crawl_date ${today}
