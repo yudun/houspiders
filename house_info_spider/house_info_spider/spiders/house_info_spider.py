@@ -87,7 +87,11 @@ class HouseInfoSpider(scrapy.Spider):
         self.cnx.close()
 
     def start_requests(self):
-        df = pd.read_csv(self.house_link_file_path)
+        try:
+            df = pd.read_csv(self.house_link_file_path)
+        except pd.errors.EmptyDataError:
+            df = pd.DataFrame()
+
         if self.mode == 'error':
             # The error_house_id csv may contain duplicates
             df = df.drop_duplicates(subset=['house_id'])
