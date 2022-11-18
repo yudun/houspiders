@@ -68,9 +68,18 @@ def send_alert_email(crawl_date):
     has_error_list_urls_alert = False
     error_list_urls_error_content = ''
     error_list_urls_path = f'/home/ubuntu/houspiders/house_list_spider/output/{crawl_date}/error_list_urls.csv'
+    error_list_urls_df = None
     if os.path.exists(error_list_urls_path):
-        error_list_urls_df = pd.read_csv(error_list_urls_path)
-        if len(error_list_urls_df) > 0:
+        try:
+            error_list_urls_df = pd.read_csv(error_list_urls_path)
+        except pd.errors.EmptyDataError:
+            pass
+        except:
+            has_error_list_urls_alert = True
+            subject += ' error_house_list_url'
+            error_list_urls_error_content = f'Error reading {error_list_urls_path}'
+
+        if error_list_urls_df is not None and len(error_list_urls_df) > 0:
             has_error_list_urls_alert = True
             subject += ' error_house_list_url'
             error_list_urls_first_3_str = '\n'.join(list(error_list_urls_df[:3]['error_list_url']) + ['...'])
@@ -78,11 +87,21 @@ def send_alert_email(crawl_date):
 {len(error_list_urls_df)} house list page urls have errors:
 {error_list_urls_first_3_str}
 """
+
     has_error_house_info_urls_alert = False
     error_house_info_urls_error_content = ''
-    error_house_info_url_df = pd.read_csv(
-        f'/home/ubuntu/houspiders/house_info_spider/output/{crawl_date}/error_house_id2.csv')
-    if len(error_house_info_url_df) > 0:
+    error_house_info_url_df = None
+    error_house_info_url_path = f'/home/ubuntu/houspiders/house_info_spider/output/{crawl_date}/error_house_id2.csv'
+    try:
+        error_house_info_url_df = pd.read_csv(error_house_info_url_path)
+    except pd.errors.EmptyDataError:
+        pass
+    except:
+        has_error_house_info_urls_alert = True
+        subject += ' error_house_info_url'
+        error_house_info_urls_error_content = f'Error reading {error_house_info_url_path}'
+
+    if error_house_info_url_df is not None and len(error_house_info_url_df) > 0:
         has_error_house_info_urls_alert = True
         subject += ' error_house_info_url'
         error_house_info_url_str = '\n'.join(
