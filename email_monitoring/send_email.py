@@ -1,5 +1,5 @@
 """
-python3 ./main.py -m summary --crawl_date 2022-11-14
+python3 ./send_email.py -m summary --crawl_date 2022-11-17
 """
 import getopt
 import os
@@ -41,7 +41,7 @@ def send_email(subject, mail_content, to_emails=None, sender_email='housetech.al
 
 def send_summary_email(crawl_date):
     cnx = dbutil.get_mysql_cnx()
-    stats_df = pd.read_sql(f"""SELECT category, city, new_added_house_num, 
+    stats_df = pd.read_sql(f"""SELECT sale_category, city, new_added_house_num, 
                             new_unavailable_become_available_house_num, 
                             updated_house_num,
                             new_unavailable_house_num 
@@ -53,7 +53,7 @@ def send_summary_email(crawl_date):
     subject = f"{stats_df['new_added_house_num'].sum()} New, {stats_df['new_unavailable_house_num'].sum()} Removed, {stats_df['updated_house_num'].sum()} Updated, {stats_df['new_unavailable_become_available_house_num'].sum()} Reopen"
 
     result_content = '\n'.join([
-        f'{x.city} {x.category}: {x.new_added_house_num} New, {x.new_unavailable_house_num} Removed, {x.updated_house_num} Updated, {x.new_unavailable_become_available_house_num} Reopen'
+        f'{x.city} {x.sale_category}: {x.new_added_house_num} New, {x.new_unavailable_house_num} Removed, {x.updated_house_num} Updated, {x.new_unavailable_become_available_house_num} Reopen'
         for _, x in stats_df.iterrows()])
 
     send_email(subject=f'[Houspider Update][{crawl_date}] {subject}',
