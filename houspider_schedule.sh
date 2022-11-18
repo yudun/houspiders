@@ -30,5 +30,5 @@ scrapy crawl house_info -O output/${today}/error_house_id2.csv \
 
 # Send summary email
 cd /home/ubuntu/houspiders/email_monitoring
-python3 ./main.py -m summary --crawl_date ${today}
-python3 ./main.py -m alert --crawl_date ${today}
+python3 ./send_email.py -m summary --crawl_date ${today}
+python3 ./send_email.py -m alert --crawl_date ${today}
