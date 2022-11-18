@@ -122,7 +122,7 @@ if __name__ == "__main__":
             print(usage)
             sys.exit()
         elif opt in ("-m", "--mode"):
-            strategy = arg
+            mode = arg
         elif opt in ("--crawl_date"):
             crawl_date = arg
     assert mode in ('summary', 'alert')
