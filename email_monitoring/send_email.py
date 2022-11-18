@@ -60,6 +60,7 @@ def send_summary_email(crawl_date):
                mail_content=f"""Houspider Results for {crawl_date}:
 {result_content}
 """)
+    print('Summary Email Sent successfully.')
 
 
 def send_alert_email(crawl_date):
