@@ -139,7 +139,6 @@ class HouseInfo:
                 else:
                     tmpl = tr.css('ul.normalEquipment').css('li::text').getall()
                 self.conditions += [re.sub('\n.*', '', x.strip()) for x in tmpl]
-        self.conditions.remove('')
 
         bukkenSpecDetail = response.css('.mod-bukkenSpecDetail')
         self.unit_num = utils.get_int_from_text(bukkenSpecDetail.css('#chk-bkd-allunit::text').get())
@@ -286,9 +285,11 @@ def update_house_info_table(house_info, cnx, cur):
     if num_inserted_station > 0:
         logging.info(f'house_id {house_info.house_id}: {num_inserted_station} stations are inserted.')
 
-    # Update stations info in lifull_house_condition table.
+    # Update conditions info in lifull_house_condition table.
     num_inserted_condition = 0
     for condition in conditions:
+        if condition == '':
+            continue
         insert_data = {
             'house_id': house_info.house_id,
             'house_condition': condition,
