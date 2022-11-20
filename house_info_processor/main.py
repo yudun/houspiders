@@ -108,14 +108,38 @@ class HouseInfo:
         self.has_elevator = False
         self.note = None
         self.has_special_note = False
+        self.conditions = []
+
         for tr in bukkenNotes.css('tr'):
             if tr.css('th::text').get() == '設備・サービス':
                 equipments = tr.css('ul.normalEquipment').css('li::text').getall()
                 equipments = [re.sub('\n.*', '', x.strip()) for x in equipments]
                 self.has_elevator = 'エレベーター' in equipments
+            elif tr.css('th::text').get() == 'この物件のこだわり':
+                tmpl = tr.css('ul.bukkenEquipment').css('li.active').css('span::text').getall()
+                self.conditions += [re.sub('\n.*', '', x.strip()) for x in tmpl]
+            elif tr.css('th::text').get() == '物件の状況':
+                if tr.css('ul.normalEquipment').get() is None:
+                    tmpl = tr.css('td::text').getall()
+                else:
+                    tmpl = tr.css('ul.normalEquipment').css('li::text').getall()
+                self.conditions += [re.sub('\n.*', '', x.strip()) for x in tmpl]
+            elif tr.css('th::text').get() == '保険・保証':
+                if tr.css('ul.normalEquipment').get() is None:
+                    tmpl = tr.css('td::text').getall()
+                else:
+                    tmpl = tr.css('ul.normalEquipment').css('li::text').getall()
+                self.conditions += [re.sub('\n.*', '', x.strip()) for x in tmpl]
             elif tr.css('th::text').get() == '備考':
                 self.note = ''.join(tr.css('td#chk-bkf-biko::text').getall()).strip()
                 self.has_special_note = '告知事項' in self.note
+            elif tr.css('th::text').get() == 'その他':
+                if tr.css('ul.normalEquipment').get() is None:
+                    tmpl = tr.css('td::text').getall()
+                else:
+                    tmpl = tr.css('ul.normalEquipment').css('li::text').getall()
+                self.conditions += [re.sub('\n.*', '', x.strip()) for x in tmpl]
+        self.conditions.remove('')
 
         bukkenSpecDetail = response.css('.mod-bukkenSpecDetail')
         self.unit_num = utils.get_int_from_text(bukkenSpecDetail.css('#chk-bkd-allunit::text').get())
@@ -223,6 +247,9 @@ def update_house_info_table(house_info, cnx, cur):
     # We will store stations in another table.
     stations = insert_data['stations']
     del insert_data['stations']
+    # We will store conditions in another table.
+    conditions = insert_data['conditions']
+    del insert_data['conditions']
 
     row_count = dbutil.insert_table(
         val_map=insert_data,
@@ -254,13 +281,29 @@ def update_house_info_table(house_info, cnx, cur):
             on_duplicate_update_val_map=insert_data
         )
         cnx.commit()
-        if row_count <= 0:
-            logging.error(
-                f'house_id {house_info.house_id}: Station Info is not inserted: {line}, {station}, {walk_min}')
-        else:
+        if row_count == 1:
             num_inserted_station += 1
     if num_inserted_station > 0:
         logging.info(f'house_id {house_info.house_id}: {num_inserted_station} stations are inserted.')
+
+    # Update stations info in lifull_house_condition table.
+    num_inserted_condition = 0
+    for condition in conditions:
+        insert_data = {
+            'house_id': house_info.house_id,
+            'house_condition': condition,
+        }
+        row_count = dbutil.insert_table(
+            val_map=insert_data,
+            table_name='lifull_house_condition',
+            cur=cur,
+            on_duplicate_update_val_map=insert_data
+        )
+        cnx.commit()
+        if row_count == 1:
+            num_inserted_condition += 1
+    if num_inserted_condition > 0:
+        logging.info(f'house_id {house_info.house_id}: {num_inserted_condition} conditions are inserted.')
 
 
 def process_house_info(house_id, response, cnx, cur):

@@ -19,6 +19,11 @@ CREATE TABLE IF NOT EXISTS lifull_house_price_history (
 	PRIMARY KEY(house_id, price_date)
 );
 
+CREATE TABLE IF NOT EXISTS lifull_house_condition (
+	house_id VARCHAR(32) NOT NULL PRIMARY KEY,
+	house_condition VARCHAR(255) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS lifull_stations_near_house (
 	house_id VARCHAR(32) NOT NULL,
 	line_name VARCHAR(255) NOT NULL,
