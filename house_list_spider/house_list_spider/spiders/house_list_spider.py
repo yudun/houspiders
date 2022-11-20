@@ -203,10 +203,10 @@ class HouseListSpider(scrapy.Spider):
                 else:
                     # Parse house_id from house_link
                     house_id_parse = re.findall(r'room/[0-9a-z]+', house_link)
-                    if len(house_id_parse) != 1 and house_id_parse.split('/') != 2:
+                    if len(house_id_parse) != 1 or house_id_parse[0].split('/') != 2:
                         logging.error(f'house_id parse failure: {house_link}')
                         return
-                    house_id = house_id_parse.split('/')[1]
+                    house_id = house_id_parse[0].split('/')[1]
 
                 yield {'house_id': house_id,
                        'is_pr_item': is_pr_item,

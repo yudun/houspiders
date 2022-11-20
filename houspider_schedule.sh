@@ -7,6 +7,7 @@ today=$(TZ=America/Los_Angeles date '+%Y-%m-%d')
 cd /home/ubuntu/houspiders/house_list_spider
 scrapy crawl house_list -O output/${today}/house_links.csv \
 -a error_list_urls_path=output/${today}/error_list_urls.csv \
+-a category=chuko \
 --logfile log/${today}-log.txt
 
 # Process the new house list
