@@ -370,6 +370,7 @@ if __name__ == "__main__":
 
     file_paths = [join(parent_dir_path, f) for f in listdir(parent_dir_path)
                   if isfile(join(parent_dir_path, f)) and f.endswith('.html')]
+    print(f'{len(file_paths)} html files will be processed.')
     for file_path in file_paths:
         house_id = basename(file_path).replace('.html', '')
         with open(file_path, 'r') as f:
