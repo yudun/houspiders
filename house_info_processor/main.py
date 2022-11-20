@@ -45,7 +45,7 @@ class HouseInfo:
         self.room = response.css('.mod-buildingName').css('.bukkenRoom::text').get()
 
         detailTopSale = response.css('.mod-detailTopSale')
-        self.price = utils.get_int_from_text(detailTopSale.css('#chk-bkc-moneyroom::text').get())
+        self.price = utils.get_float_from_text(detailTopSale.css('#chk-bkc-moneyroom::text').get())
         self.address = self.safe_strip(detailTopSale.css('#chk-bkc-fulladdress::text').get())
 
         valid_district = get_district_from_name(self.address)
@@ -58,9 +58,9 @@ class HouseInfo:
         else:
             self.district = valid_district[0]
 
-        self.moneykyoueki = utils.get_int_from_text(
+        self.moneykyoueki = utils.get_float_from_text(
             self.safe_strip(detailTopSale.css('#chk-bkc-moneykyoueki::text').get()))
-        self.moneyshuuzen = utils.get_int_from_text(
+        self.moneyshuuzen = utils.get_float_from_text(
             self.safe_strip(detailTopSale.css('#chk-bkc-moneyshuuzen::text').get()))
 
         self.stations = []
@@ -168,7 +168,7 @@ class HouseInfo:
                                              do_not_count_null=True)
         self.land_right = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landright::text').get())
         land_moneyshakuchi = bukkenSpecDetail.css('#chk-bkd-moneyshakuchi::text').get()
-        self.land_moneyshakuchi = None if land_moneyshakuchi is None else utils.get_int_from_text(
+        self.land_moneyshakuchi = None if land_moneyshakuchi is None else utils.get_float_from_text(
             land_moneyshakuchi.strip())
         land_term = bukkenSpecDetail.css('#chk-bkd-conterm::text').get()
         self.land_term = None if land_term is None else land_term.strip()
@@ -178,7 +178,7 @@ class HouseInfo:
                                                  do_not_count_null=True)
 
         other_fees = [] if self.other_fee_details is None else re.findall(r'\d*,?\d+円', self.other_fee_details)
-        self.total_other_fee = sum(utils.get_int_from_text(x) for x in other_fees)
+        self.total_other_fee = sum(utils.get_float_from_text(x) for x in other_fees)
 
         self.manage_details = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-management::text').get())
         self.latest_rent_status = self.safe_strip(

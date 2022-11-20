@@ -62,7 +62,7 @@ class HouseListSpider(scrapy.Spider):
         total_num_house = utils.get_int_from_text(response.css('.totalNum::text').get())
         num_pages = utils.get_int_from_text(response.css('.lastPage>span::text').get())
         logging.info(f'Total {total_num_house} houses and {num_pages} pages found.')
-        for page_index in range(num_pages):
+        for page_index in range(1):
             if self.category == constant.CHINTAI:
                 # We are only interested in the 23 districts.
                 chintai_form_data = {
@@ -108,7 +108,7 @@ class HouseListSpider(scrapy.Spider):
                 for house_item in house_item_list:
                     house_link_list.append(house_item.css('.detail>a::attr("href")').get())
                     house_listing_price_list.append(
-                        utils.get_int_from_text(house_item.css('.priceLabel>span.num::text').get()))
+                        utils.get_float_from_text(house_item.css('.priceLabel>span.num::text').get()))
             # Otherwise it only has one house_link -- most likely a PR item
             else:
                 if len(house.css('a.detailLink::attr("href")')) > 0:
@@ -118,7 +118,7 @@ class HouseListSpider(scrapy.Spider):
                     continue
                 if len(house.css('.price>span.num::text')) > 0:
                     house_listing_price_list.append(
-                        utils.get_int_from_text(house.css('.price>span.num::text').get()))
+                        utils.get_float_from_text(house.css('.price>span.num::text').get()))
                 else:
                     house_listing_price_list.append(None)
                     logging.error(f'house_price can not be found for {listing_house_name}.')
@@ -161,17 +161,17 @@ class HouseListSpider(scrapy.Spider):
             listing_house_rent_list = []
             listing_house_manage_fee_list = []
 
-            house_item_list = house.css('.prg-room.prg-building.checkSelect')
+            house_item_list = house.css('tr.prg-room.checkSelect[data-href!=""]')
             # if this house has details list, it contains multiple house_link
             if len(house_item_list) > 0:
                 for house_item in house_item_list:
                     house_link_list.append(house_item.css('.detail>a::attr("href")').get())
                     listing_house_rent_list.append(
-                        utils.get_int_from_text(house_item.css('.priceLabel>span.num::text').get()))
+                        utils.get_float_from_text(house_item.css('.priceLabel>span.num::text').get()))
                     tmp_l = house_item.css('.price::text').getall()
                     if len(tmp_l) != 2:
                         logging.error(f'Manage fee error format for {listing_house_name}.')
-                    listing_house_manage_fee_list.append(utils.get_int_from_text(tmp_l[0]))
+                    listing_house_manage_fee_list.append(utils.get_float_from_text(tmp_l[0]))
             # Otherwise it only has one house_link -- most likely a PR item
             else:
                 if len(house.css('a.detailLink::attr("href")')) > 0:
@@ -181,9 +181,9 @@ class HouseListSpider(scrapy.Spider):
                     continue
                 if len(house.css('.price>span.num::text')) > 0 and len(house.css('td.price::text')) > 0:
                     listing_house_rent_list.append(
-                        utils.get_int_from_text(house.css('.price>span.num::text').get()))
+                        utils.get_float_from_text(house.css('.price>span.num::text').get()))
                     listing_house_manage_fee_list.append(
-                        utils.get_int_from_text(house.css('td.price::text').get()))
+                        utils.get_float_from_text(house.css('td.price::text').get()))
                 else:
                     listing_house_rent_list.append(None)
                     listing_house_manage_fee_list.append(None)
