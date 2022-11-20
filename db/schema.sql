@@ -12,6 +12,18 @@ CREATE TABLE IF NOT EXISTS lifull_house_link (
 	unavailable_date DATE
 );
 
+CREATE TABLE IF NOT EXISTS lifull_rent_link (
+	house_id VARCHAR(64) NOT NULL PRIMARY KEY,
+	is_pr_item BOOLEAN NOT NULL DEFAULT FALSE,
+	listing_house_name VARCHAR(255) NOT NULL,
+	listing_house_rent INT NOT NULL,
+	listing_house_manage_fee INT NOT NULL,
+	city VARCHAR(255) NOT NULL,
+	is_available BOOLEAN NOT NULL,
+	first_available_date DATE NOT NULL,
+	unavailable_date DATE
+);
+
 CREATE TABLE IF NOT EXISTS lifull_house_price_history (
 	house_id VARCHAR(32) NOT NULL,
 	price INT NOT NULL,
