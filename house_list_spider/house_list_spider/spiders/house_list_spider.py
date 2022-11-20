@@ -115,7 +115,7 @@ class HouseListSpider(scrapy.Spider):
                     house_link_list.append(house.css('a.detailLink::attr("href")').get())
                 else:
                     logging.error(f'house_link can not be found for {listing_house_name}.')
-                    return
+                    continue
                 if len(house.css('.price>span.num::text')) > 0:
                     house_listing_price_list.append(
                         utils.get_int_from_text(house.css('.price>span.num::text').get()))
@@ -131,7 +131,7 @@ class HouseListSpider(scrapy.Spider):
                 house_id_parse = re.findall(r'/b-\d+/', house_link)
                 if len(house_id_parse) != 1 and len(re.findall(r'\d+', house_id_parse[0])) != 1:
                     logging.error(f'house_id parse failure: {house_link}')
-                    return
+                    continue
                 house_id = int(re.findall(r'\d+', house_id_parse[0])[0])
 
                 yield {'house_id': house_id,
@@ -178,7 +178,7 @@ class HouseListSpider(scrapy.Spider):
                     house_link_list.append(house.css('a.detailLink::attr("href")').get())
                 else:
                     logging.error(f'house_link can not be found for {listing_house_name}.')
-                    return
+                    continue
                 if len(house.css('.price>span.num::text')) > 0 and len(house.css('td.price::text')) > 0:
                     listing_house_rent_list.append(
                         utils.get_int_from_text(house.css('.price>span.num::text').get()))
@@ -197,15 +197,15 @@ class HouseListSpider(scrapy.Spider):
                 if is_pr_item:
                     house_id_parse = re.findall(r'/b-\d+/', house_link)
                     if len(house_id_parse) != 1 and len(re.findall(r'\d+', house_id_parse[0])) != 1:
-                        logging.error(f'house_id parse failure: {house_link}')
-                        return
+                        logging.error(f'PR house_id parse failure: {house_link}')
+                        continue
                     house_id = re.findall(r'\d+', house_id_parse[0])[0]
                 else:
                     # Parse house_id from house_link
                     house_id_parse = re.findall(r'room/[0-9a-z]+', house_link)
-                    if len(house_id_parse) != 1 or house_id_parse[0].split('/') != 2:
+                    if len(house_id_parse) != 1 or len(house_id_parse[0].split('/')) != 2:
                         logging.error(f'house_id parse failure: {house_link}')
-                        return
+                        continue
                     house_id = house_id_parse[0].split('/')[1]
 
                 yield {'house_id': house_id,
