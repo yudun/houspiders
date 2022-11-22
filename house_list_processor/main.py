@@ -2,7 +2,11 @@
 python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_links.csv \
 -o output/2022-11-14/house_id_to_crawl.csv --logfile log/2022-11-14-log.txt \
 --crawl_date 2022-11-14 --category mansion_chuko --city tokyo
---
+
+
+python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_links.csv \
+-o output/2022-11-14/house_id_to_crawl.csv --logfile log/2022-11-14-log.txt \
+--crawl_date 2022-11-14 --category chintai --city tokyo
 """
 import csv
 import getopt
@@ -15,9 +19,14 @@ sys.path.append('../')
 
 import db.utils as dbutil
 from utils import utils
+from utils import constant
 
 
-def handle_possible_new_house_df(df, cnx):
+def get_link_table_name_from_category(category):
+    return 'lifull_rent_link' if category == constant.CHINTAI else 'lifull_house_link'
+
+
+def handle_possible_new_house_df(df, category, cnx):
     """
     If the house exists, update it as is_available;
     If not, add it to `house_link` table.
@@ -26,22 +35,34 @@ def handle_possible_new_house_df(df, cnx):
     date_today_str = utils.get_date_str_today()
     success_added_rowcount = 0
     success_updated_rowcount = 0
+    table_name = get_link_table_name_from_category(category)
     for index, row in df.iterrows():
-        update_data = {
-            'is_pr_item': row.is_pr_item_new,
-            'listing_house_name': row.listing_house_name,
-            'listing_house_price': row.listing_house_price_new,
-            'sale_category': row.sale_category,
-            'city': row.city,
-            'is_available': 1,
-            'unavailable_date': None
-        }
+        if category == constant.CHINTAI:
+            update_data = {
+                'is_pr_item': row.is_pr_item_new,
+                'listing_house_name': row.listing_house_name,
+                'listing_house_rent': row.listing_house_rent_new,
+                'listing_house_manage_fee': row.listing_house_manage_fee_new,
+                'city': row.city,
+                'is_available': 1,
+                'unavailable_date': None
+            }
+        else:
+            update_data = {
+                'is_pr_item': row.is_pr_item_new,
+                'listing_house_name': row.listing_house_name,
+                'listing_house_price': row.listing_house_price_new,
+                'sale_category': row.sale_category,
+                'city': row.city,
+                'is_available': 1,
+                'unavailable_date': None
+            }
         rowcount = dbutil.insert_table(val_map={
             'house_id': row.house_id,
             'first_available_date': date_today_str,
             **update_data
         },
-            table_name='lifull_house_link',
+            table_name=table_name,
             cur=cur,
             on_duplicate_update_val_map=update_data)
         if rowcount == 1:
@@ -56,25 +77,38 @@ def handle_possible_new_house_df(df, cnx):
     return success_added_rowcount, success_updated_rowcount
 
 
-def handle_updated_house_df(df, cnx):
+def handle_updated_house_df(df, category, cnx):
     """
     Update the house in `house_link` table.
     """
     cur = cnx.cursor(buffered=True)
     success_updated_rowcount = 0
+    table_name = get_link_table_name_from_category(category)
     for index, row in df.iterrows():
-        rowcount = dbutil.update_table(val_map={
-            'is_pr_item': row.is_pr_item_new,
-            'listing_house_name': row.listing_house_name,
-            'listing_house_price': row.listing_house_price_new,
-            'sale_category': row.sale_category,
-            'city': row.city,
-            'is_available': 1,
-            'unavailable_date': None
-        },
-            where_clause=f'house_id={row.house_id}',
-            table_name='lifull_house_link',
-            cur=cur)
+        if category == constant.CHINTAI:
+            update_data = {
+                'is_pr_item': row.is_pr_item_new,
+                'listing_house_name': row.listing_house_name,
+                'listing_house_rent': row.listing_house_rent_new,
+                'listing_house_manage_fee': row.listing_house_manage_fee_new,
+                'city': row.city,
+                'is_available': 1,
+                'unavailable_date': None
+            }
+        else:
+            update_data = {
+                'is_pr_item': row.is_pr_item_new,
+                'listing_house_name': row.listing_house_name,
+                'listing_house_price': row.listing_house_price_new,
+                'sale_category': row.sale_category,
+                'city': row.city,
+                'is_available': 1,
+                'unavailable_date': None
+            }
+        rowcount = dbutil.update_table(val_map=update_data,
+                                       where_clause=f'house_id="{row.house_id}"',
+                                       table_name=table_name,
+                                       cur=cur)
         success_updated_rowcount += rowcount
         logging.info(f'handle_updated_house_df: rowcount={rowcount}, house_id:{row.house_id}')
 
@@ -84,13 +118,76 @@ def handle_updated_house_df(df, cnx):
     return success_updated_rowcount
 
 
+def get_different_mansion_slices(new_house_link_df, cnx):
+    available_house_df = pd.read_sql(
+        'SELECT house_id, is_pr_item, listing_house_price FROM lifull_house_link WHERE is_available', cnx)
+
+    if len(available_house_df) > 0:
+        logging.info(f'{len(available_house_df)} houses read from database.')
+        available_house_df['house_id'] = available_house_df['house_id'].astype(int)
+        available_house_df['is_pr_item'] = available_house_df['is_pr_item'].astype(bool)
+
+        # Get 3 different groups of houses: new, removed, updated.
+        merged_df = new_house_link_df.merge(available_house_df, how='outer', on=['house_id'], suffixes=['_new', '_old'])
+
+        newly_unavailable_house_df = merged_df[merged_df['is_pr_item_new'].isnull()]
+        possible_new_house_df = merged_df[merged_df['is_pr_item_old'].isnull()]
+        updated_house_df = merged_df.dropna()
+        updated_house_df = updated_house_df[
+            (updated_house_df['is_pr_item_new'] != updated_house_df['is_pr_item_old']) | (
+                    updated_house_df['listing_house_price_new'] != updated_house_df['listing_house_price_old'])]
+    else:
+        logging.info('No available houses read from database.')
+        newly_unavailable_house_df = None
+        possible_new_house_df = new_house_link_df
+        possible_new_house_df['is_pr_item_new'] = possible_new_house_df['is_pr_item']
+        possible_new_house_df['listing_house_price_new'] = possible_new_house_df['listing_house_price']
+        updated_house_df = None
+
+    return newly_unavailable_house_df, possible_new_house_df, updated_house_df
+
+
+def get_different_rent_slices(new_house_link_df, cnx):
+    available_house_df = pd.read_sql(
+        'SELECT house_id, is_pr_item, listing_house_rent, listing_house_manage_fee FROM lifull_rent_link WHERE '
+        'is_available',
+        cnx)
+
+    if len(available_house_df) > 0:
+        logging.info(f'{len(available_house_df)} houses read from database.')
+        available_house_df['house_id'] = available_house_df['house_id'].astype(str)
+        available_house_df['is_pr_item'] = available_house_df['is_pr_item'].astype(bool)
+
+        # Get 3 different groups of houses: new, removed, updated.
+        merged_df = new_house_link_df.merge(available_house_df, how='outer', on=['house_id'], suffixes=['_new', '_old'])
+
+        newly_unavailable_house_df = merged_df[merged_df['is_pr_item_new'].isnull()]
+        possible_new_house_df = merged_df[merged_df['is_pr_item_old'].isnull()]
+        updated_house_df = merged_df.dropna()
+        updated_house_df = updated_house_df[
+            (updated_house_df['is_pr_item_new'] != updated_house_df['is_pr_item_old']) | (
+                    updated_house_df['listing_house_rent_new'] != updated_house_df['listing_house_rent_old']) | (
+                    updated_house_df['listing_house_manage_fee_new'] != updated_house_df[
+                'listing_house_manage_fee_old'])]
+    else:
+        logging.info('No available houses read from database.')
+        newly_unavailable_house_df = None
+        possible_new_house_df = new_house_link_df
+        possible_new_house_df['is_pr_item_new'] = possible_new_house_df['is_pr_item']
+        possible_new_house_df['listing_house_rent_new'] = possible_new_house_df['listing_house_rent']
+        possible_new_house_df['listing_house_manage_fee_new'] = possible_new_house_df['listing_house_manage_fee']
+        updated_house_df = None
+
+    return newly_unavailable_house_df, possible_new_house_df, updated_house_df
+
+
 def main(house_links_file_path, output_file_path, strategy, crawl_date, category, city):
     """
      1. Add new listed houses to `house_link` table and put them into feed
      2. For those houses with updated price or was unavailable,
         we merge its info to `house_link` and `house_price_history` table and put it into feed;
      3. For remaining house, they are existing house w/o updated price, we do nothing
-     4. For those available house not showing up in latest house_list, put them into feed;
+     4. For those available house not showing up in the latest house_list, put them into feed;
 
     :param house_links_file_path: The new house links crawled by house_list_spider
     :param output_file_path: A csv file path to be consumed by downstream house_info_spider
@@ -117,45 +214,30 @@ def main(house_links_file_path, output_file_path, strategy, crawl_date, category
     cnx = dbutil.get_mysql_cnx()
 
     # Read in existing available house
-    available_house_df = pd.read_sql(
-        'SELECT house_id, is_pr_item, listing_house_price FROM lifull_house_link WHERE is_available', cnx)
-    if len(available_house_df) > 0:
-        logging.info(f'{len(available_house_df)} houses read from database.')
-        available_house_df['house_id'] = available_house_df['house_id'].astype(int)
-        available_house_df['is_pr_item'] = available_house_df['is_pr_item'].astype(bool)
-
-        # Get 3 different groups of houses: new, removed, updated.
-        merged_df = new_house_link_df.merge(available_house_df, how='outer', on=['house_id'], suffixes=['_new', '_old'])
-
-        newly_unavailable_house_df = merged_df[merged_df['is_pr_item_new'].isnull()]
-        possible_new_house_df = merged_df[merged_df['is_pr_item_old'].isnull()]
-        updated_house_df = merged_df.dropna()
-        updated_house_df = updated_house_df[
-            (updated_house_df['is_pr_item_new'] != updated_house_df['is_pr_item_old']) | (
-                    updated_house_df['listing_house_price_new'] != updated_house_df['listing_house_price_old'])]
+    if category == constant.CHINTAI:
+        newly_unavailable_house_df, possible_new_house_df, updated_house_df = get_different_rent_slices(
+            new_house_link_df, cnx)
     else:
-        logging.info('No available houses read from database.')
-        newly_unavailable_house_df = None
-        possible_new_house_df = new_house_link_df
-        possible_new_house_df['is_pr_item_new'] = possible_new_house_df['is_pr_item']
-        possible_new_house_df['listing_house_price_new'] = possible_new_house_df['listing_house_price']
-        updated_house_df = None
+        newly_unavailable_house_df, possible_new_house_df, updated_house_df = get_different_mansion_slices(
+            new_house_link_df, cnx)
 
     # 1. Handle newly_unavailable_house_df: simply put them into feed;
     if newly_unavailable_house_df is not None:
         newly_unavailable_house_list = list(newly_unavailable_house_df['house_id'])
         output_house_ids += newly_unavailable_house_list
-        logging.info(f'{len(newly_unavailable_house_list)} newly unavailable houses:' + str(newly_unavailable_house_list))
+        logging.info(
+            f'{len(newly_unavailable_house_list)} newly unavailable houses:' + str(newly_unavailable_house_list))
 
     # 2. Handle possible_new_house_df
     if possible_new_house_df is not None:
         success_added_rowcount, success_updated_available_rowcount = handle_possible_new_house_df(possible_new_house_df,
+                                                                                                  category,
                                                                                                   cnx)
         output_house_ids += list(possible_new_house_df['house_id'])
 
     # 2. Handle updated_house_df
     if updated_house_df is not None:
-        success_updated_rowcount = handle_updated_house_df(updated_house_df, cnx)
+        success_updated_rowcount = handle_updated_house_df(updated_house_df, category, cnx)
         output_house_ids += list(updated_house_df['house_id'])
 
     if strategy == 'all':
@@ -182,7 +264,7 @@ def main(house_links_file_path, output_file_path, strategy, crawl_date, category
 
     # Close the database connection
     cnx.close()
-    
+
     # Create the parent path if not exist
     os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
 
@@ -207,7 +289,8 @@ if __name__ == "__main__":
     city = ''
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hi:o:s:l:",
-                                   ["ifile=", "ofile=", "strategy=", "logfile=", "loglevel=", "crawl_date=", "category=", "city="])
+                                   ["ifile=", "ofile=", "strategy=", "logfile=", "loglevel=", "crawl_date=",
+                                    "category=", "city="])
     except getopt.GetoptError:
         print(usage)
         sys.exit(2)
@@ -239,6 +322,8 @@ if __name__ == "__main__":
     print('Input file is', house_links_file_path)
     print('Output file is', output_file_path)
     print('Strategy used:', strategy)
+    print('category:', category)
+    print('city:', city)
     print('Log to file:', log_file)
 
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',

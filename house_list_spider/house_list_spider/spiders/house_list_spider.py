@@ -1,6 +1,6 @@
 """
 scrapy crawl house_list -O output/2022-11-14/house_links.csv -a error_list_urls_path=output/2022-11-14/error_list_urls.csv \
--a category=chuko \
+-a category=mansion_chuko \
 --logfile log/2022-11-14-log.txt
 
 scrapy crawl house_list -O output/2022-11-14/house_chintai_links.csv -a error_list_urls_path=output/2022-11-14/error_chintai_list_urls.csv \
@@ -52,8 +52,8 @@ class HouseListSpider(scrapy.Spider):
                 logging.info(f'{len(self.failed_pages_list)} urls written to {self.error_list_urls_path}')
 
     def start_requests(self):
-        if self.category == constant.CHUKO:
-            yield scrapy.Request(url=f'https://www.homes.co.jp/mansion/{self.category}/tokyo/list', callback=self.fanout_list_page)
+        if self.category == constant.MANSION_CHUKO:
+            yield scrapy.Request(url=f'https://www.homes.co.jp/mansion/chuko/tokyo/list', callback=self.fanout_list_page)
         if self.category == constant.CHINTAI:
             yield scrapy.Request(url=f'https://www.homes.co.jp/chintai/tokyo/list/', callback=self.fanout_list_page)
 
