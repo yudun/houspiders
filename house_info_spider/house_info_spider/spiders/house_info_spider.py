@@ -121,7 +121,9 @@ class HouseInfoSpider(scrapy.Spider):
 
     def parse_house_info(self, response, house_id):
         logging.info(f'Start crawling {house_id}')
-        if response.status == 404 or response.css('.mod-expiredInformation').get() is not None or response.css('.mod-bukkenNotFound').get() is not None:
+        if response.status == 404 or response.css('.mod-expiredInformation').get() is not None or \
+                response.css('.mod-bukkenNotFound').get() is not None or \
+                response.css('.mod-expiredMessage').get() is not None:
             row_count = process_unavailable_house(house_id, self.category, self.cnx, self.cur)
             if row_count > 0:
                 self.new_unavailable_house_num += 1
