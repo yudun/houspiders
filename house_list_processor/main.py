@@ -4,8 +4,8 @@ python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14
 --crawl_date 2022-11-14 --category mansion_chuko --city tokyo
 
 
-python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_links.csv \
--o output/2022-11-14/house_id_to_crawl.csv --logfile log/2022-11-14-log.txt \
+python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_chintai_links.csv \
+-o output/2022-11-14/house_chintai_id_to_crawl.csv --logfile log/2022-11-14-chintai-log.txt \
 --crawl_date 2022-11-14 --category chintai --city tokyo
 """
 import csv

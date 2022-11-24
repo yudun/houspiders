@@ -2,10 +2,18 @@ from datetime import datetime
 import pytz
 import re
 import logging
+import constant
 
 
-def get_lifull_url_from_house_id(house_id):
+def get_lifull_mansion_url_from_house_id(house_id):
     return f'https://www.homes.co.jp/mansion/b-{house_id}/?iskks=1'
+
+
+def get_lifull_chintai_url_from_house_id(house_id):
+    if house_id.isnumeric():
+        return f'https://www.homes.co.jp/chintai/b-{house_id}/?iskks=1'
+
+    return f'https://www.homes.co.jp/chintai/room/{house_id}'
 
 
 def get_date_str_today():
@@ -47,3 +55,11 @@ def get_log_level_from_str(log_level_str):
         return logging.FATAL
     else:
         return None
+
+
+def get_district_from_name(name):
+    valid_district = []
+    for district in constant.TOKYO_DISTRICTS:
+        if district in name:
+            valid_district.append(district)
+    return valid_district
