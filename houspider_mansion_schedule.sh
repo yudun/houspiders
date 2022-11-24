@@ -28,8 +28,3 @@ scrapy crawl house_info -O output/${today}/error_house_id2.csv \
 -a i=output/${today}/error_house_id1.csv -a m=error \
 -a crawl_date=${today} -a category=mansion_chuko -a city=tokyo \
 --logfile log/${today}-log2.txt
-
-# Send summary email
-cd /home/ubuntu/houspiders/email_monitoring
-python3 ./send_email.py -m summary --crawl_date ${today}
-python3 ./send_email.py -m alert --crawl_date ${today}

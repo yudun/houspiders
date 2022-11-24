@@ -62,7 +62,7 @@ class HouseListSpider(scrapy.Spider):
         total_num_house = utils.get_int_from_text(response.css('.totalNum::text').get())
         num_pages = utils.get_int_from_text(response.css('.lastPage>span::text').get())
         logging.info(f'Total {total_num_house} houses and {num_pages} pages found.')
-        for page_index in range(num_pages):
+        for page_index in range(1):
             if self.category == constant.CHINTAI:
                 # We are only interested in the 23 districts.
                 chintai_form_data = {
