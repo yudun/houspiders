@@ -102,7 +102,7 @@ class RentInfo:
         other_fees = [] if self.other_fee_details is None else re.findall(r'\d*,?\d+円', self.other_fee_details)
         self.total_other_fee = sum(utils.get_float_from_text(x) for x in other_fees)
         self.structure = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-housekouzou::text').get())
-        self.parking_lot = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-parking::text').get())
+        self.parking_lot = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-parking::text').get(), do_not_count_null=True)
         self.unit_num = utils.get_int_from_text(bukkenSpecDetail.css('#chk-bkd-parkunit::text').get(),
                                                 empty_str_to_none=True)
         num_floor_infos = bukkenSpecDetail.css('#chk-bkd-housekai::text').get()
@@ -128,16 +128,20 @@ class RentInfo:
         self.guarantee_company = self.safe_strip(''.join(bukkenSpecDetail.css('#chk-bkd-guaranteecom::text').getall()))
         self.insurance = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-insurance::text').get())
         self.current_status = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-genkyo::text').get())
-        rent_start_date_str = self.safe_strip(
-            bukkenSpecDetail.css('#chk-bkd-usable').css('div.spec::text').get(), default='')
-        tmp_l = re.findall(r'\d+', ''.join(re.findall(r'\d+年\d+月', rent_start_date_str)))
-        if len(tmp_l) != 2:
-            self.rent_start_date = rent_start_date_str
+        
+        if bukkenSpecDetail.css('#chk-bkd-usable').css('div.spec::text').get() is None:
+            self.rent_start_date = bukkenSpecDetail.css('#chk-bkd-usable::text').get()
         else:
-            if '下旬' in rent_start_date_str:
-                self.rent_start_date = date(int(tmp_l[0]), int(tmp_l[1]), 15).strftime("%Y-%m-%d")
+            rent_start_date_str = self.safe_strip(
+                bukkenSpecDetail.css('#chk-bkd-usable').css('div.spec::text').get(), default='')
+            tmp_l = re.findall(r'\d+', ''.join(re.findall(r'\d+年\d+月', rent_start_date_str)))
+            if len(tmp_l) != 2:
+                self.rent_start_date = rent_start_date_str
             else:
-                self.rent_start_date = date(int(tmp_l[0]), int(tmp_l[1]), 1).strftime("%Y-%m-%d")
+                if '下旬' in rent_start_date_str:
+                    self.rent_start_date = date(int(tmp_l[0]), int(tmp_l[1]), 15).strftime("%Y-%m-%d")
+                else:
+                    self.rent_start_date = date(int(tmp_l[0]), int(tmp_l[1]), 1).strftime("%Y-%m-%d")
         self.trade_method = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-taiyou::text').get())
         register_date = bukkenSpecDetail.css('#chk-bkd-newdate::text').get()
         self.register_date = None if register_date is None else register_date.replace('/', '-')
