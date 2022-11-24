@@ -4,17 +4,17 @@ export PATH="/home/ubuntu/.autojump/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin
 today=$(TZ=America/Los_Angeles date '+%Y-%m-%d')
 
 # Run house_list_spider
-cd /home/ubuntu/houspiders/house_list_spider
-scrapy crawl house_list -O output/${today}/house_chintai_links.csv \
--a error_list_urls_path=output/${today}/error_chintai_list_urls.csv \
--a category=chintai \
---logfile log/${today}-chintai-log.txt
+# cd /home/ubuntu/houspiders/house_list_spider
+# scrapy crawl house_list -O output/${today}/house_chintai_links.csv \
+# -a error_list_urls_path=output/${today}/error_chintai_list_urls.csv \
+# -a category=chintai \
+# --logfile log/${today}-chintai-log.txt
 
-# Process the new house list
-cd /home/ubuntu/houspiders/house_list_processor
-python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/${today}/house_chintai_links.csv \
--o output/${today}/house_chintai_id_to_crawl.csv --logfile log/${today}-chintai-log.txt \
---crawl_date ${today} --category chintai --city tokyo
+# # Process the new house list
+# cd /home/ubuntu/houspiders/house_list_processor
+# python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/${today}/house_chintai_links.csv \
+# -o output/${today}/house_chintai_id_to_crawl.csv --logfile log/${today}-chintai-log.txt \
+# --crawl_date ${today} --category chintai --city tokyo
 
 # Run house_info_spider based on house_id_to_crawl.csv output from processor
 cd /home/ubuntu/houspiders/house_info_spider
@@ -30,6 +30,6 @@ scrapy crawl house_info -O output/${today}/error_house_chintai_id2.csv \
 --logfile log/${today}-chintai-log2.txt
 
 # Send summary email
-cd /home/ubuntu/houspiders/email_monitoring
-python3 ./send_email.py -m summary --crawl_date ${today}
-python3 ./send_email.py -m alert --crawl_date ${today}
+# cd /home/ubuntu/houspiders/email_monitoring
+# python3 ./send_email.py -m summary --crawl_date ${today}
+# python3 ./send_email.py -m alert --crawl_date ${today}

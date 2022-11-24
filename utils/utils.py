@@ -2,7 +2,7 @@ from datetime import datetime
 import pytz
 import re
 import logging
-import constant
+from utils import constant
 
 
 def get_lifull_mansion_url_from_house_id(house_id):

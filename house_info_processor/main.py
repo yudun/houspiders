@@ -8,8 +8,8 @@ import logging
 import sys
 from scrapy import Selector
 
-from mansion_info import MansionInfo
-from rent_info import RentInfo
+from house_info_processor.mansion_info import MansionInfo
+from house_info_processor.rent_info import RentInfo
 
 sys.path.append('../')
 
@@ -78,7 +78,7 @@ def update_rent_price_if_changed(house_id, rent, manage_fee, cnx, cur):
     Update price in `lifull_rent_price_history` table if different from latest or no record.
     """
     cur.execute(
-        f'SELECT listing_house_rent, listing_house_manage_fee, price_date from lifull_rent_price_history WHERE '
+        f'SELECT rent, manage_fee, price_date from lifull_rent_price_history WHERE '
         f'house_id="{house_id}" order by price_date asc;')
     all_rows = cur.fetchall()
     rowcount = 0

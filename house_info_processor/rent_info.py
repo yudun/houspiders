@@ -132,9 +132,7 @@ class RentInfo:
             bukkenSpecDetail.css('#chk-bkd-usable').css('div.spec::text').get(), default='')
         tmp_l = re.findall(r'\d+', ''.join(re.findall(r'\d+年\d+月', rent_start_date_str)))
         if len(tmp_l) != 2:
-            self.num_null_fields += 1
-            logging.error(f'{house_id}: error parse rent_start_date {rent_start_date_str})')
-            self.rent_start_date = None
+            self.rent_start_date = rent_start_date_str
         else:
             if '下旬' in rent_start_date_str:
                 self.rent_start_date = date(int(tmp_l[0]), int(tmp_l[1]), 15).strftime("%Y-%m-%d")
