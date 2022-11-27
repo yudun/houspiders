@@ -3,7 +3,7 @@ export PATH="/home/ubuntu/.autojump/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin
 
 today=$(TZ=America/Los_Angeles date '+%Y-%m-%d')
 
- Run house_list_spider
+#  Run house_list_spider
  cd /home/ubuntu/houspiders/house_list_spider
  scrapy crawl house_list -O output/${today}/house_chintai_links.csv \
  -a error_list_urls_path=output/${today}/error_chintai_list_urls.csv \

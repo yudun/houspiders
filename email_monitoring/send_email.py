@@ -88,9 +88,6 @@ def send_alert_email(crawl_date):
 {len(error_list_urls_df)} house list page urls have errors:
 {error_list_urls_first_3_str}
 """
-        else:
-            has_error_list_urls_alert = True
-            error_list_urls_error_content += f'\nPath not exists: {error_list_urls_path}'
 
     if has_error_list_urls_alert:
         subject += ' error_house_list_url'
