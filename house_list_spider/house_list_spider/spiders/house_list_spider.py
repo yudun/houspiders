@@ -25,6 +25,19 @@ class HouseListSpider(scrapy.Spider):
     name = 'house_list'
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/48.0'
 
+    # We are only interested in the 23 districts.
+    chintai_form_data = {
+        **{f'cond[city][{idx}]': str(idx) for idx in range(13101, 13124)},
+        "cond[monthmoneyroom]": "0",
+        "cond[monthmoneyroomh]": "0",
+        "cond[housearea]": "0",
+        "cond[houseareah]": "0",
+        "cond[walkminutesh]": "0",
+        "cond[houseageh]": "0",
+        "bukken_attr[category]": "chintai",
+        "bukken_attr[pref]": "13",
+    }
+
     def __init__(self, error_list_urls_path, category, **kw):
         self.error_list_urls_path = error_list_urls_path
         self.category = category
@@ -54,8 +67,10 @@ class HouseListSpider(scrapy.Spider):
     def start_requests(self):
         if self.category == constant.MANSION_CHUKO:
             yield scrapy.Request(url=f'https://www.homes.co.jp/mansion/chuko/tokyo/list', callback=self.fanout_list_page)
-        if self.category == constant.CHINTAI:
-            yield scrapy.Request(url=f'https://www.homes.co.jp/chintai/tokyo/list/', callback=self.fanout_list_page)
+        elif self.category == constant.CHINTAI:
+            yield scrapy.FormRequest(url=f'https://www.homes.co.jp/chintai/tokyo/list/',
+                                     callback=self.fanout_list_page,
+                                     method="POST", formdata=self.chintai_form_data)
 
     # Step 1. Parse the 1st house listing page
     def fanout_list_page(self, response):
@@ -64,21 +79,9 @@ class HouseListSpider(scrapy.Spider):
         logging.info(f'Total {total_num_house} houses and {num_pages} pages found.')
         for page_index in range(num_pages):
             if self.category == constant.CHINTAI:
-                # We are only interested in the 23 districts.
-                chintai_form_data = {
-                    **{f'cond[city][{idx}]': str(idx) for idx in range(13101, 13124)},
-                    "cond[monthmoneyroom]": "0",
-                    "cond[monthmoneyroomh]": "0",
-                    "cond[housearea]": "0",
-                    "cond[houseareah]": "0",
-                    "cond[walkminutesh]": "0",
-                    "cond[houseageh]": "0",
-                    "bukken_attr[category]": "chintai",
-                    "bukken_attr[pref]": "13",
-                }
                 yield scrapy.FormRequest(url=f'{response.url}?page={page_index + 1}',
                                          callback=self.parse_chintai_list_page,
-                                         method="POST", formdata=chintai_form_data,
+                                         method="POST", formdata=self.chintai_form_data,
                                          errback=self.errback_httpbin)
             else:
                 yield scrapy.Request(url=f'{response.url}?page={page_index + 1}', callback=self.parse_mansion_list_page,
