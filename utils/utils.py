@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import re
 import logging
@@ -18,6 +18,10 @@ def get_lifull_chintai_url_from_house_id(house_id):
 
 def get_date_str_today():
     return datetime.now(tz=pytz.timezone('America/Los_Angeles')).strftime("%Y-%m-%d")
+
+
+def get_date_str_yesterday():
+    return (datetime.now(tz=pytz.timezone('America/Los_Angeles')) - timedelta(days=1)).strftime("%Y-%m-%d")
 
 
 def get_int_from_text(item, empty_str_to_none=False):

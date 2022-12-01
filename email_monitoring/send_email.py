@@ -109,10 +109,11 @@ def send_alert_email(crawl_date):
         if error_house_info_url_df is not None and len(error_house_info_url_df) > 0:
             has_error_house_info_urls_alert = True
             error_house_info_url_str = '\n'.join(
-                [f'{x.house_id}: {x.fail_reason}' for _, x in error_house_info_url_df.iterrows()])
+                [f'{x.house_id}: {x.fail_reason}' for _, x in error_house_info_url_df[:100].iterrows()])
             error_house_info_urls_error_content += f"""
-{len(error_house_info_url_df)} house info urls have errors:
+{len(error_house_info_url_df)} house info urls have errors in {error_house_info_url_path.split('/')[-1]}:
 {error_house_info_url_str}
+...
 """
     if has_error_house_info_urls_alert:
             subject += ' error_house_info_url'

@@ -24,6 +24,7 @@ import scrapy
 from scrapy import signals
 import pandas as pd
 import logging
+import os
 import sys
 
 from scrapy.spidermiddlewares.httperror import HttpError
@@ -103,6 +104,13 @@ class HouseInfoSpider(scrapy.Spider):
             df = pd.read_csv(self.house_link_file_path)
         except pd.errors.EmptyDataError:
             df = pd.DataFrame()
+
+        if self.mode == 'original':
+            # Always retry visiting url failed from yesterday
+            failed_url_yesterday_path = f'output/{utils.get_date_str_yesterday()}/error_house_chintai_id2.csv'
+            if os.path.exists(failed_url_yesterday_path):
+                failed_url_yesterday_df = pd.read_csv(failed_url_yesterday_path)
+                df = pd.concat([failed_url_yesterday_df[['house_id']], df])
 
         if self.mode == 'error':
             # The error_house_id csv may contain duplicates
