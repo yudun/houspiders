@@ -1,7 +1,7 @@
 CREATE DATABASE IF NOT EXISTS house;
 
 CREATE TABLE IF NOT EXISTS lifull_house_link (
-	house_id VARCHAR(64) NOT NULL PRIMARY KEY,
+	house_id VARCHAR(64) NOT NULL,
 	is_pr_item BOOLEAN NOT NULL DEFAULT FALSE,
 	listing_house_name VARCHAR(255) NOT NULL,
 	listing_house_price FLOAT NOT NULL,
@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS lifull_house_link (
 	city VARCHAR(255) NOT NULL,
 	is_available BOOLEAN NOT NULL,
 	first_available_date DATE NOT NULL,
-	unavailable_date DATE
+	unavailable_date DATE,
+	PRIMARY KEY(house_id, sale_category)
 );
 
 CREATE TABLE IF NOT EXISTS lifull_rent_link (

@@ -3,6 +3,9 @@ python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14
 -o output/2022-11-14/house_id_to_crawl.csv --logfile log/2022-11-14-log.txt \
 --crawl_date 2022-11-14 --category mansion_chuko --city tokyo
 
+python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_other_links.csv \
+-o output/2022-11-14/house_other_id_to_crawl.csv --logfile log/2022-11-14-other-log.txt \
+--crawl_date 2022-11-14 --category other --city tokyo
 
 python3 ./main.py -i /home/ubuntu/houspiders/house_list_spider/output/2022-11-14/house_chintai_links.csv \
 -o output/2022-11-14/house_chintai_id_to_crawl.csv --logfile log/2022-11-14-chintai-log.txt \
@@ -118,9 +121,9 @@ def handle_updated_house_df(df, category, cnx):
     return success_updated_rowcount
 
 
-def get_different_mansion_slices(new_house_link_df, cnx):
+def get_different_mansion_slices(new_house_link_df, category, cnx):
     available_house_df = pd.read_sql(
-        'SELECT house_id, is_pr_item, listing_house_price FROM lifull_house_link WHERE is_available', cnx)
+        f'SELECT house_id, is_pr_item, listing_house_price FROM lifull_house_link WHERE is_available AND sale_category={category}', cnx)
 
     if len(available_house_df) > 0:
         logging.info(f'{len(available_house_df)} houses read from database.')
@@ -219,7 +222,7 @@ def main(house_links_file_path, output_file_path, strategy, crawl_date, category
             new_house_link_df, cnx)
     else:
         newly_unavailable_house_df, possible_new_house_df, updated_house_df = get_different_mansion_slices(
-            new_house_link_df, cnx)
+            new_house_link_df, category, cnx)
 
     # 1. Handle newly_unavailable_house_df: simply put them into feed;
     if newly_unavailable_house_df is not None:
@@ -235,7 +238,7 @@ def main(house_links_file_path, output_file_path, strategy, crawl_date, category
                                                                                                   cnx)
         output_house_ids += list(possible_new_house_df['house_id'])
 
-    # 2. Handle updated_house_df
+    # 3. Handle updated_house_df
     if updated_house_df is not None:
         success_updated_rowcount = handle_updated_house_df(updated_house_df, category, cnx)
         output_house_ids += list(updated_house_df['house_id'])

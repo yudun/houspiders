@@ -1,5 +1,5 @@
 """
-python3 ./main.py -i /home/ubuntu/houspiders/house_info_spider/output/raw_html --logfile log/2022-11-15-log.txt
+python3 ./main.py -i /home/ubuntu/houspiders/house_info_spider/output/raw_html --logfile log/2022-11-15-log.txt --category mansion_chuko
 """
 from os import listdir
 from os.path import isfile, join, basename
@@ -179,7 +179,7 @@ def update_house_info_table(house_info, category, cnx, cur):
         logging.info(f'house_id {house_info.house_id}: {num_inserted_condition} conditions are inserted.')
 
 
-def process_mansion_info(house_id, response, cnx, cur):
+def process_mansion_info(house_id, response, category, cnx, cur):
     """
     1. Update its price in `house_price_history` table if different from latest or no record;
     2. Inject/merge new data into `house_info` table;
@@ -193,7 +193,7 @@ def process_mansion_info(house_id, response, cnx, cur):
     elif updated_row_count == 2:
         logging.info(f'Update new price in lifull_house_price_history for {house_id}')
 
-    update_house_info_table(house_info, constant.MANSION_CHUKO, cnx, cur)
+    update_house_info_table(house_info, category, cnx, cur)
 
 
 def process_rent_info(house_id, response, cnx, cur):
@@ -214,13 +214,14 @@ def process_rent_info(house_id, response, cnx, cur):
 
 
 if __name__ == "__main__":
-    usage = 'main.py -i <parent_dir_path> --id <certain_house_id> --logfile <log_file> --loglevel <loglevel>'
+    usage = 'main.py -i <parent_dir_path> --id <certain_house_id> --logfile <log_file> --loglevel <loglevel> --category <category>'
     parent_dir_path = ''
     log_file = ''
     certain_house_id = ''
+    category = ''
     loglevel = logging.INFO
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hi:l:", ["dir=", "logfile=", "id=", "loglevel="])
+        opts, args = getopt.getopt(sys.argv[1:], "hi:l:", ["dir=", "logfile=", "id=", "loglevel=", "category="])
     except getopt.GetoptError:
         print(usage)
         sys.exit(2)
@@ -236,7 +237,9 @@ if __name__ == "__main__":
             loglevel = utils.get_log_level_from_str(arg)
         elif opt in ("-l", "--logfile"):
             log_file = arg
-    if parent_dir_path == '' or log_file == '':
+        elif opt in ("--category"):
+            category = arg
+    if parent_dir_path == '' or log_file == '' or category == '':
         print(usage)
         sys.exit(2)
     print('Input parent dir path is', parent_dir_path)
@@ -256,7 +259,7 @@ if __name__ == "__main__":
         file_path = join(parent_dir_path, f'{certain_house_id}.html')
         with open(file_path, 'r') as f:
             logging.debug(f'process_mansion_info for {file_path}')
-            process_mansion_info(int(certain_house_id), Selector(text=str(f.read())), cnx, cur)
+            process_mansion_info(int(certain_house_id), Selector(text=str(f.read())), category, cnx, cur)
         sys.exit()
 
     file_paths = [join(parent_dir_path, f) for f in listdir(parent_dir_path)
@@ -266,4 +269,4 @@ if __name__ == "__main__":
         house_id = basename(file_path).replace('.html', '')
         with open(file_path, 'r') as f:
             logging.debug(f'process_mansion_info for {file_path}')
-            process_mansion_info(house_id, Selector(text=str(f.read())), cnx, cur)
+            process_mansion_info(house_id, Selector(text=str(f.read())), category, cnx, cur)

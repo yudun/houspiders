@@ -9,6 +9,15 @@ scrapy crawl house_info -O output/2022-11-15/error_house_id2.csv \
 -a crawl_date=2022-11-15 -a category=mansion_chuko -a city=tokyo \
 --logfile log/2022-11-15-log2.txt
 
+scrapy crawl house_info -O output/2022-11-15/error_house_other_id1.csv \
+-a i=/home/ubuntu/houspiders/house_list_processor/output/2022-11-15/house_other_id_to_crawl.csv -a m=original \
+-a crawl_date=2022-11-15 -a category=other -a city=tokyo \
+--logfile log/2022-11-15-other-log1.txt
+
+scrapy crawl house_info -O output/2022-11-15/error_house_other_id2.csv \
+-a i=output/2022-11-15/error_house_other_id1.csv -a m=error \
+-a crawl_date=2022-11-15 -a category=other -a city=tokyo \
+--logfile log/2022-11-15-other-log2.txt
 
 scrapy crawl house_info -O output/2022-11-15/error_house_chintai_id1.csv \
 -a i=/home/ubuntu/houspiders/house_list_processor/output/2022-11-15/house_chintai_id_to_crawl.csv -a m=original \
@@ -107,7 +116,7 @@ class HouseInfoSpider(scrapy.Spider):
 
         if self.mode == 'original':
             # Always retry visiting url failed from yesterday
-            failed_url_yesterday_path = f'output/{utils.get_date_str_yesterday()}/error_house_chintai_id2.csv'
+            failed_url_yesterday_path = f'output/{utils.get_date_str_yesterday()}/error_house{("_" + self.category) if self.category != constant.MANSION_CHUKO else ""}_id2.csv '
             if os.path.exists(failed_url_yesterday_path):
                 failed_url_yesterday_df = pd.read_csv(failed_url_yesterday_path)
                 df = pd.concat([failed_url_yesterday_df[['house_id']], df])
@@ -122,8 +131,12 @@ class HouseInfoSpider(scrapy.Spider):
                 yield scrapy.Request(url=utils.get_lifull_chintai_url_from_house_id(row.house_id), callback=self.parse_house_info,
                                      errback=self.errback_httpbin,
                                      cb_kwargs={'house_id': str(row.house_id)})
-            else:
+            elif self.category == constant.MANSION_CHUKO:
                 yield scrapy.Request(url=utils.get_lifull_mansion_url_from_house_id(row.house_id), callback=self.parse_house_info,
+                                     errback=self.errback_httpbin,
+                                     cb_kwargs={'house_id': str(row.house_id)})
+            elif self.category == constant.OTHER:
+                yield scrapy.Request(url=utils.get_lifull_other_url_from_house_id(row.house_id), callback=self.parse_house_info,
                                      errback=self.errback_httpbin,
                                      cb_kwargs={'house_id': str(row.house_id)})
 
@@ -175,7 +188,7 @@ class HouseInfoSpider(scrapy.Spider):
                 cur=self.cur)
             self.cnx.commit()
 
-            process_mansion_info(house_id, response, self.cnx, self.cur)
+            process_mansion_info(house_id, response, self.category, self.cnx, self.cur)
         logging.info(f'Finish processing {house_id}')
     
     def errback_httpbin(self, failure):

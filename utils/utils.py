@@ -9,6 +9,10 @@ def get_lifull_mansion_url_from_house_id(house_id):
     return f'https://www.homes.co.jp/mansion/b-{house_id}/?iskks=1'
 
 
+def get_lifull_other_url_from_house_id(house_id):
+    return f'https://www.homes.co.jp/other/b-{house_id}/?iskks=1'
+
+
 def get_lifull_chintai_url_from_house_id(house_id):
     if house_id.isnumeric():
         return f'https://www.homes.co.jp/chintai/b-{house_id}/?iskks=1'

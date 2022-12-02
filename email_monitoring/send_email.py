@@ -69,7 +69,8 @@ def send_alert_email(crawl_date):
     has_error_list_urls_alert = False
     error_list_urls_error_content = ''
     error_list_urls_paths = [f'/home/ubuntu/houspiders/house_list_spider/output/{crawl_date}/error_list_urls.csv',
-                             f'/home/ubuntu/houspiders/house_list_spider/output/{crawl_date}/error_chintai_list_urls.csv']
+                             f'/home/ubuntu/houspiders/house_list_spider/output/{crawl_date}/error_chintai_list_urls.csv',
+                             f'/home/ubuntu/houspiders/house_list_spider/output/{crawl_date}/error_other_list_urls.csv']
     error_list_urls_df = None
     for error_list_urls_path in error_list_urls_paths:
         if os.path.exists(error_list_urls_path):
@@ -96,7 +97,8 @@ def send_alert_email(crawl_date):
     error_house_info_urls_error_content = ''
     error_house_info_url_df = None
     error_house_info_url_paths = [f'/home/ubuntu/houspiders/house_info_spider/output/{crawl_date}/error_house_id2.csv',
-                                  f'/home/ubuntu/houspiders/house_info_spider/output/{crawl_date}/error_house_chintai_id2.csv']
+                                  f'/home/ubuntu/houspiders/house_info_spider/output/{crawl_date}/error_house_chintai_id2.csv',
+                                  f'/home/ubuntu/houspiders/house_info_spider/output/{crawl_date}/error_house_other_id2.csv']
     for error_house_info_url_path in error_house_info_url_paths:
         try:
             error_house_info_url_df = pd.read_csv(error_house_info_url_path)

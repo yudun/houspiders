@@ -3,6 +3,10 @@ scrapy crawl house_list -O output/2022-11-14/house_links.csv -a error_list_urls_
 -a category=mansion_chuko \
 --logfile log/2022-11-14-log.txt
 
+scrapy crawl house_list -O output/2022-11-14/house_other_links.csv -a error_list_urls_path=output/2022-11-14/error_other_list_urls.csv \
+-a category=other \
+--logfile log/2022-11-14-other-log.txt
+
 scrapy crawl house_list -O output/2022-11-14/house_chintai_links.csv -a error_list_urls_path=output/2022-11-14/error_chintai_list_urls.csv \
 -a category=chintai \
 --logfile log/2022-11-14-chintai-log.txt
@@ -25,7 +29,11 @@ class HouseListSpider(scrapy.Spider):
     name = 'house_list'
     user_agent = 'Mozilla/5.0 (X11; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/48.0'
 
-    # We are only interested in the 23 districts.
+    other_form_data = {
+        "cond[mbg][1509]": "1509",
+    }
+
+    # We are only interested in the 23 districts for rent items.
     chintai_form_data = {
         **{f'cond[city][{idx}]': str(idx) for idx in range(13101, 13124)},
         "cond[monthmoneyroom]": "0",
@@ -67,6 +75,10 @@ class HouseListSpider(scrapy.Spider):
     def start_requests(self):
         if self.category == constant.MANSION_CHUKO:
             yield scrapy.Request(url=f'https://www.homes.co.jp/mansion/chuko/tokyo/list', callback=self.fanout_list_page)
+        elif self.category == constant.OTHER:
+            yield scrapy.FormRequest(url=f'https://www.homes.co.jp/mansion/tokyo/list/',
+                                     callback=self.fanout_list_page,
+                                     method="POST", formdata=self.other_form_data)
         elif self.category == constant.CHINTAI:
             yield scrapy.FormRequest(url=f'https://www.homes.co.jp/chintai/tokyo/list/',
                                      callback=self.fanout_list_page,
@@ -83,7 +95,12 @@ class HouseListSpider(scrapy.Spider):
                                          callback=self.parse_chintai_list_page,
                                          method="POST", formdata=self.chintai_form_data,
                                          errback=self.errback_httpbin)
-            else:
+            elif self.category == constant.OTHER:
+                yield scrapy.FormRequest(url=f'{response.url}?page={page_index + 1}',
+                                         callback=self.parse_other_list_page,
+                                         method="POST", formdata=self.other_form_data,
+                                         errback=self.errback_httpbin)
+            elif self.category == constant.MANSION_CHUKO:
                 yield scrapy.Request(url=f'{response.url}?page={page_index + 1}', callback=self.parse_mansion_list_page,
                                      errback=self.errback_httpbin)
 
@@ -143,6 +160,64 @@ class HouseListSpider(scrapy.Spider):
                        'listing_house_price': house_listing_price,
                        'sale_category': sale_category,
                        'city': city}
+
+                num_house_on_the_page += 1
+
+        logging.info(f'Finish crawling {request_url} with {num_house_on_the_page} house found.')
+
+    # Step 2. Parse each house listing page and extract house_id
+    def parse_other_list_page(self, response):
+        request_url = response.url
+        logging.info(f'Start crawling {request_url}')
+
+        num_house_on_the_page = 0
+        for house in response.css('.moduleInner'):
+            is_pr_item = len(house.css('.icon:contains(PR)')) > 0
+            listing_house_name = house.css('.bukkenName::text').get()
+            if listing_house_name is None:
+                logging.error(f'listing_house_name parse failure: {listing_house_name}')
+
+            house_link_list = []
+            house_listing_price_list = []
+
+            house_item_list = house.css('.checkSelect')
+            # if this house has details list, it contains multiple house_link
+            if len(house_item_list) > 0:
+                for house_item in house_item_list:
+                    house_link_list.append(house_item.css('.detail>a::attr("href")').get())
+                    house_listing_price_list.append(
+                        utils.get_float_from_text(house_item.css('.priceLabel>span.num::text').get()))
+            # Otherwise it only has one house_link -- most likely a PR item
+            else:
+                if len(house.css('a.detailLink::attr("href")')) > 0:
+                    house_link_list.append(house.css('a.detailLink::attr("href")').get())
+                else:
+                    logging.error(f'house_link can not be found for {listing_house_name}.')
+                    continue
+                if len(house.css('.price>span.num::text')) > 0:
+                    house_listing_price_list.append(
+                        utils.get_float_from_text(house.css('.price>span.num::text').get()))
+                else:
+                    house_listing_price_list.append(None)
+                    logging.error(f'house_price can not be found for {listing_house_name}.')
+
+            for idx in range(len(house_link_list)):
+                house_link = house_link_list[idx]
+                house_listing_price = house_listing_price_list[idx]
+
+                # Parse house_id from house_link
+                house_id_parse = re.findall(r'/b-\d+/', house_link)
+                if len(house_id_parse) != 1 and len(re.findall(r'\d+', house_id_parse[0])) != 1:
+                    logging.error(f'house_id parse failure: {house_link}')
+                    continue
+                house_id = int(re.findall(r'\d+', house_id_parse[0])[0])
+
+                yield {'house_id': house_id,
+                       'is_pr_item': is_pr_item,
+                       'listing_house_name': listing_house_name,
+                       'listing_house_price': house_listing_price,
+                       'sale_category': 'other',
+                       'city': 'tokyo'}
 
                 num_house_on_the_page += 1
 
