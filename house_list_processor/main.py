@@ -123,7 +123,7 @@ def handle_updated_house_df(df, category, cnx):
 
 def get_different_mansion_slices(new_house_link_df, category, cnx):
     available_house_df = pd.read_sql(
-        f'SELECT house_id, is_pr_item, listing_house_price FROM lifull_house_link WHERE is_available AND sale_category={category}', cnx)
+        f'SELECT house_id, is_pr_item, listing_house_price FROM lifull_house_link WHERE is_available AND sale_category="{category}"', cnx)
 
     if len(available_house_df) > 0:
         logging.info(f'{len(available_house_df)} houses read from database.')
