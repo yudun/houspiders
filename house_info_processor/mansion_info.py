@@ -29,6 +29,9 @@ class MansionInfo:
 
         detailTopSale = response.css('.mod-detailTopSale')
         self.price = utils.get_float_from_text(detailTopSale.css('#chk-bkc-moneyroom::text').get())
+        if self.price == 0:
+            # If the price is not available it is possible in inner span
+            self.price = utils.get_float_from_text(detailTopSale.css('#chk-bkc-moneyroom').css('.num>span::text').get())
         self.address = self.safe_strip(detailTopSale.css('#chk-bkc-fulladdress::text').get())
 
         valid_district = utils.get_district_from_name(self.address)
@@ -47,7 +50,10 @@ class MansionInfo:
             self.safe_strip(detailTopSale.css('#chk-bkc-moneyshuuzen::text').get()))
 
         self.stations = []
-        for traffic in detailTopSale.css('#chk-bkc-fulltraffic').css('.traffic::text').getall():
+        station_text_list = detailTopSale.css('#chk-bkc-fulltraffic').css('.traffic::text').getall()
+        if len(station_text_list) == 0:
+            station_text_list = detailTopSale.css('#chk-bkc-fulltraffic>p::text').getall()
+        for traffic in station_text_list:
             traffic = re.split(' +', traffic.strip())
             if len(traffic) != 3:
                 continue
@@ -79,7 +85,7 @@ class MansionInfo:
         self.house_area = utils.get_float_from_text(
             self.safe_strip(detailTopSale.css('#chk-bkc-housearea::text').get()))
         self.balcony_area = utils.get_float_from_text(
-            self.safe_strip(detailTopSale.css('#chk-bkc-balconyarea::text').get()))
+            self.safe_strip(detailTopSale.css('#chk-bkc-balconyarea::text').get(), default='0', do_not_count_null=True))
         self.has_balcony = self.balcony_area > 0
         self.floor_plan = self.safe_strip(detailTopSale.css('#chk-bkc-marodi::text').get())
         self.feature_comment = self.safe_strip(detailTopSale.css('#chk-bkp-featurecomment::text').get(),
@@ -97,7 +103,11 @@ class MansionInfo:
             if tr.css('th::text').get() == '設備・サービス':
                 equipments = tr.css('ul.normalEquipment').css('li::text').getall()
                 equipments = [re.sub('\n.*', '', x.strip()) for x in equipments]
-                self.has_elevator = 'エレベーター' in equipments
+                self.has_elevator = self.has_elevator or 'エレベーター' in equipments
+            if tr.css('th::text').get() == '設備・条件':
+                equipments = tr.css('ul.normalEquipment').css('li::text').getall()
+                equipments = [re.sub('\n.*', '', x.strip()) for x in equipments]
+                self.has_elevator = self.has_elevator or 'エレベーター' in equipments
             elif tr.css('th::text').get() == 'この物件のこだわり':
                 tmpl = tr.css('ul.bukkenEquipment').css('li.active').css('span::text').getall()
                 self.conditions += [re.sub('\n.*', '', x.strip()) for x in tmpl]
@@ -124,6 +134,30 @@ class MansionInfo:
                 self.conditions += [re.sub('\n.*', '', x.strip()) for x in tmpl]
 
         bukkenSpecDetail = response.css('.mod-bukkenSpecDetail')
+        self.cash_on_cash_roi_percentage = utils.get_float_from_text(
+                self.safe_strip(bukkenSpecDetail.css('#chk-bkd-moneyrimawari::text').get(),
+                                do_not_count_null=True))
+
+        # Fallback house_area to new entries in bukkenSpecDetail
+        if self.house_area is None or self.house_area == 0:
+            self.house_area = utils.get_float_from_text(
+                self.safe_strip(bukkenSpecDetail.css('#chk-bkd-houseareaminmax::text').get(), default='0',
+                                do_not_count_null=True).split('～')[0])
+        if self.house_area is None or self.house_area == 0:
+            self.house_area = utils.get_float_from_text(
+                self.safe_strip(bukkenSpecDetail.css('#chk-bkd-housearea::text').get(), default='0',
+                                do_not_count_null=True))
+
+        self.land_area = utils.get_float_from_text(
+                self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landarea::text').get(), do_not_count_null=True))
+
+        # Fallback balcony_area to new entries in bukkenSpecDetail
+        if self.balcony_area == 0:
+            self.balcony_area = utils.get_float_from_text(
+                self.safe_strip(bukkenSpecDetail.css('#chk-bkd-balconyarea::text').get(), default='0',
+                                do_not_count_null=True))
+            self.has_balcony = self.balcony_area > 0
+
         self.unit_num = utils.get_int_from_text(bukkenSpecDetail.css('#chk-bkd-allunit::text').get())
 
         num_floor_infos = bukkenSpecDetail.css('#chk-bkd-housekai::text').get()
@@ -144,7 +178,10 @@ class MansionInfo:
             else:
                 self.num_total_floor = utils.get_int_from_text(num_total_floor_l[0], empty_str_to_none=True)
 
-        self.structure = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-housekouzou::text').get())
+        if bukkenSpecDetail.css('#chk-bkd-housekouzou::text').get() is not None:
+            self.structure = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-housekouzou::text').get())
+        else:
+            self.structure = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-kouzou::text').get())
         self.land_usage = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landyouto::text').get(),
                                           do_not_count_null=True)
         self.land_position = self.safe_strip(bukkenSpecDetail.css('#chk-bkd-landchisei::text').get(),

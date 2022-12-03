@@ -91,7 +91,9 @@ CREATE TABLE IF NOT EXISTS lifull_house_info (
 	total_other_fee FLOAT NOT NULL,
 	manage_details TEXT,
 	latest_rent_status VARCHAR(32),
-	trade_method VARCHAR(32)
+	trade_method VARCHAR(32),
+	land_area FLOAT,
+	cash_on_cash_roi_percentage FLOAT
 );
 
 CREATE TABLE IF NOT EXISTS lifull_rent_info (
