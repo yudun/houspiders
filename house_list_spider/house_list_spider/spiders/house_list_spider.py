@@ -205,6 +205,9 @@ class HouseListSpider(scrapy.Spider):
                 house_link = house_link_list[idx]
                 house_listing_price = house_listing_price_list[idx]
 
+                if house_link is None or not isinstance(house_link, str):
+                    logging.error(f'house_link parse failure: {"PR" if is_pr_item else ""} {listing_house_name}: {house_link}')
+                    continue
                 # Parse house_id from house_link
                 house_id_parse = re.findall(r'/b-\d+/', house_link)
                 if len(house_id_parse) != 1 and len(re.findall(r'\d+', house_id_parse[0])) != 1:
