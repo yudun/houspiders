@@ -180,7 +180,7 @@ class HouseListSpider(scrapy.Spider):
             house_link_list = []
             house_listing_price_list = []
 
-            house_item_list = house.css('.checkSelect')
+            house_item_list = house.css('.checkSelect.prg-building')
             # if this house has details list, it contains multiple house_link
             if len(house_item_list) > 0:
                 for house_item in house_item_list:
